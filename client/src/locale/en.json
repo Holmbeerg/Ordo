@@ -1,0 +1,21 @@
+{
+  "nav": {
+    "home": "Home",
+    "about": "About",
+    "rules": "Rules"
+  },
+  "home": {
+    "title": "Ordo",
+    "description": "Challenge your vocabulary and strategic thinking in this word-building game with chess-inspired time controls.",
+    "pickTime": "Pick a time control and start playing!",
+    "bullet": "Bullet (1+1)",
+    "blitz": "Blitz (3+0)",
+    "rapid": "Rapid (5+0)",
+    "classical": "Classical (10+0)",
+    "searching": "Searching for opponent...",
+    "timeMode": "Time mode:",
+    "searchingFor": "Searching for",
+    "seconds": "seconds",
+    "cancel": "Cancel"
+  }
+}

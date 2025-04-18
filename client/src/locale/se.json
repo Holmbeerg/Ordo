@@ -1,0 +1,21 @@
+{
+  "nav": {
+    "home": "Hem",
+    "about": "Om",
+    "rules": "Regler"
+  },
+  "home": {
+    "title": "Ordo",
+    "description": "Utmana ditt ordförråd och strategiska tänkande i detta ordbyggande spel med schackinspirerade tidskontroller.",
+    "pickTime": "Välj en tidskontroll och börja spela!",
+    "bullet": "Bullet (1+1)",
+    "blitz": "Blitz (3+0)",
+    "rapid": "Rapid (5+0)",
+    "classical": "Klassisk (10+0)",
+    "searching": "Söker motståndare...",
+    "timeMode": "Tidsläge:",
+    "searchingFor": "Sökt i",
+    "seconds": "sekunder",
+    "cancel": "Avbryt"
+  }
+}
