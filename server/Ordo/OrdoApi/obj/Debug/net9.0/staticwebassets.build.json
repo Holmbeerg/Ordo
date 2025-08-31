@@ -1,0 +1,12 @@
+{
+  "Version": 1,
+  "Hash": "6HeEINBofmtN055dRq8k3L4jrF3CJFQUrZ6g7Au7ODA=",
+  "Source": "OrdoApi",
+  "BasePath": "_content/OrdoApi",
+  "Mode": "Default",
+  "ManifestType": "Build",
+  "ReferencedProjectsConfiguration": [],
+  "DiscoveryPatterns": [],
+  "Assets": [],
+  "Endpoints": []
+}
