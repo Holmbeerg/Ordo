@@ -63,8 +63,7 @@ import {ref, onUnmounted} from 'vue';
 import {useRouter} from 'vue-router';
 import { useI18n } from 'vue-i18n';
 // TODO: import { joinQueue, leaveQueue } from '../services/socket' or something;
-
-const router = useRouter();
+useRouter();
 const searching = ref(false);
 const { t } = useI18n();
 const currentMode = ref('');
@@ -104,7 +103,6 @@ const startSearch = (mode: string) => {
     searchTimeSeconds.value++;
   }, 1000);
 
-  // TODO: connect to matchmaking through Socket.IO?
   // joinQueue(mode);
 };
 
@@ -117,7 +115,6 @@ const cancelSearch = () => {
   currentMode.value = '';
   searchTimeSeconds.value = 0;
 
-  // TODO: disconnect from matchmaking through Socket.IO and connect to game?
   // leaveQueue();
 };
 

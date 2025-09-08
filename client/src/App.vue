@@ -1,6 +1,23 @@
 <script setup lang="ts">
+import { onMounted, onUnmounted } from 'vue';
 import AppFooter from "@/components/AppFooter.vue";
 import AppHeader from "@/components/AppHeader.vue";
+import { connectToHub, disconnectFromHub } from '@/services/signalr';
+
+onMounted(async () => {
+  try {
+    await connectToHub();
+    console.log('App connected to SignalR hub');
+  } catch (error) {
+    console.error('App failed to connect to SignalR hub:', error);
+  }
+})
+
+onUnmounted(async () => {
+  await disconnectFromHub();
+  console.log('App disconnected from SignalR hub');
+})
+
 </script>
 
 <template>
