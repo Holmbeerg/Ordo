@@ -1,0 +1,1 @@
+export type TimeControl = 'bullet' | 'blitz' | 'rapid' | 'classical';
