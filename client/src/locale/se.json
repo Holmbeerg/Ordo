@@ -1,8 +1,6 @@
 {
   "nav": {
-    "home": "Hem",
-    "about": "Om",
-    "rules": "Regler"
+    "home": "Hem"
   },
   "home": {
     "title": "Ordo",

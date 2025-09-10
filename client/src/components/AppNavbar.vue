@@ -3,9 +3,7 @@ https://vuejs.org/guide/essentials/class-and-style
 <template>
   <nav class="container mx-auto flex justify-between items-center">
     <div class="flex gap-4 text-2xl font-bold">
-      <router-link to="/" class="hover:underline">{{ t('nav.home') }}</router-link>
-      <router-link to="/AboutView" class="hover:underline">{{ t('nav.about') }}</router-link>
-      <router-link to="/RulesView" class="hover:underline">{{ t('nav.rules') }}</router-link>
+      <router-link to="/" class="hover:underline"> Ordo </router-link>
     </div>
 
     <div class="flex items-center gap-2">
@@ -33,7 +31,6 @@ https://vuejs.org/guide/essentials/class-and-style
 <script setup lang="ts">
 import { ref, onMounted } from 'vue';
 import { useI18n } from 'vue-i18n';
-const { t } = useI18n();
 const { locale } = useI18n();
 const currentLanguage = ref('sv');
 

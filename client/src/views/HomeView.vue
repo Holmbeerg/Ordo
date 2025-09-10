@@ -1,5 +1,5 @@
 <template>
-  <div class="flex flex-col items-center min-h-screen">
+  <div class="flex flex-col items-center min-h-screen mx-5">
     <h1 class="text-6xl font-bold text-center my-8 text-white">Ordo</h1>
 
     <div class="max-w-2xl text-center mb-8">
@@ -62,16 +62,17 @@
 import {ref, onUnmounted} from 'vue';
 import {useRouter} from 'vue-router';
 import { useI18n } from 'vue-i18n';
+import type {TimeControl} from "@/types/TimeControl.ts";
 // TODO: import { joinQueue, leaveQueue } from '../services/socket' or something;
 useRouter();
 const searching = ref(false);
 const { t } = useI18n();
-const currentMode = ref('');
+const currentMode = ref<TimeControl>('blitz')
 const searchTimeSeconds = ref(0);
 let searchTimer: number | null = null;
 
-const formatTimeControl = (mode: string): string => { // arrow function
-  switch (mode) {
+const formatTimeControl = (timeControl: TimeControl): string => { // arrow function
+  switch (timeControl) {
     case 'bullet':
       return 'Bullet (1+1)';
     case 'blitz':
@@ -81,7 +82,7 @@ const formatTimeControl = (mode: string): string => { // arrow function
     case 'classical':
       return t('home.classical');
     default:
-      return mode;
+      return timeControl;
   }
 };
 
@@ -94,7 +95,7 @@ const formatSearchTime = (seconds: number): string => {
   return `${t('home.searchingFor')} ${minutes}:${remainingSeconds < 10 ? '0' : ''}${remainingSeconds}`;
 };
 
-const startSearch = (mode: string) => {
+const startSearch = (mode: TimeControl) => {
   searching.value = true;
   currentMode.value = mode;
   searchTimeSeconds.value = 0;
@@ -112,7 +113,6 @@ const cancelSearch = () => {
     searchTimer = null;
   }
   searching.value = false;
-  currentMode.value = '';
   searchTimeSeconds.value = 0;
 
   // leaveQueue();

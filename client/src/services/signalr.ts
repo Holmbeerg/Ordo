@@ -1,5 +1,6 @@
 import * as signalR from '@microsoft/signalr';
 import {ref} from 'vue';
+import type {TimeControl} from "@/types/TimeControl.ts";
 
 export const connectionState = ref<'disconnected' | 'connecting' | 'connected'>('disconnected');
 export const playerId = ref<string>(localStorage.getItem('playerId') || '');
@@ -43,7 +44,7 @@ export const createConnection = (): signalR.HubConnection => {
         }
     });
 
-    connection.on('JoinedMatchmaking', (timeControl: string) => {
+    connection.on('JoinedMatchmaking', (timeControl: TimeControl) => {
         console.log('Joined matchmaking for:', timeControl);
     });
 
@@ -83,13 +84,13 @@ export const disconnectFromHub = async (): Promise<void> => {
     }
 };
 
-export const joinMatchmaking = async (timeControl: string): Promise<void> => {
+export const joinMatchmaking = async (timeControl: TimeControl): Promise<void> => {
     if (connection && playerId.value) {
         await connection.invoke('JoinMatchmaking', timeControl, playerId.value);
     }
 };
 
-export const leaveMatchmaking = async (timeControl: string): Promise<void> => {
+export const leaveMatchmaking = async (timeControl: TimeControl): Promise<void> => {
     if (connection && playerId.value) {
         await connection.invoke('LeaveMatchmaking', timeControl, playerId.value);
     }

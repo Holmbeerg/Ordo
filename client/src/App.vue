@@ -1,8 +1,10 @@
 <script setup lang="ts">
-import { onMounted, onUnmounted } from 'vue';
+import {computed, onMounted, onUnmounted} from 'vue';
 import AppFooter from "@/components/AppFooter.vue";
 import AppHeader from "@/components/AppHeader.vue";
 import { connectToHub, disconnectFromHub } from '@/services/signalr';
+import {useRoute} from "vue-router";
+const route = useRoute();
 
 onMounted(async () => {
   try {
@@ -18,14 +20,14 @@ onUnmounted(async () => {
   console.log('App disconnected from SignalR hub');
 })
 
+const showFooter = computed(() => !route.meta.hideFooter)
+
 </script>
 
 <template>
-  <div class="flex flex-col min-h-screen bg-[#302E2B]">
-    <AppHeader/>
-    <main class="container mx-auto p-4 flex-grow">
+  <div class="bg-[#302E2B] min-h-screen">
+    <AppHeader />
       <RouterView/>
-    </main>
-    <AppFooter/>
+    <AppFooter v-if="showFooter"/>
   </div>
 </template>
