@@ -24,12 +24,12 @@ public class GameHub(IConnectionMultiplexer redis, ILogger<GameHub> logger) : Hu
         if (!string.IsNullOrEmpty(playerId))
         {
             logger.LogInformation("Player with ID {PlayerId} is attempting to reconnect.", playerId);
-            await ReconnectPlayer(playerId);
+            await ReconnectPlayerAsync(playerId);
         }
         else
         {
             logger.LogInformation("No PlayerId found in query. Creating new guest player.");
-            await CreateNewGuestPlayer();
+            await CreateNewGuestPlayerAsync();
         }
 
         await base.OnConnectedAsync();
@@ -75,7 +75,7 @@ public class GameHub(IConnectionMultiplexer redis, ILogger<GameHub> logger) : Hu
         await base.OnDisconnectedAsync(exception);
     }
     
-    private async Task ReconnectPlayer(string playerId)
+    private async Task ReconnectPlayerAsync(string playerId)
     {
         var playerKey = $"guest_player:{playerId}";
         var playerJson = await _db.StringGetAsync(playerKey);
@@ -83,14 +83,14 @@ public class GameHub(IConnectionMultiplexer redis, ILogger<GameHub> logger) : Hu
         if (playerJson.IsNullOrEmpty)
         {
             logger.LogWarning("Reconnect failed: Player data not found in Redis for PlayerId: {PlayerId}. Creating new player", playerId);
-            await CreateNewGuestPlayer();
+            await CreateNewGuestPlayerAsync();
             return;
         }
         var player = JsonSerializer.Deserialize<GuestPlayer>(playerJson!);
         if (player == null)
         {
             logger.LogWarning("Reconnect failed: Could not deserialize player data for PlayerId: {PlayerId}. Creating new player", playerId);
-            await CreateNewGuestPlayer();
+            await CreateNewGuestPlayerAsync();
             return;
         }
         
@@ -110,7 +110,7 @@ public class GameHub(IConnectionMultiplexer redis, ILogger<GameHub> logger) : Hu
         // TODO: add back to group if in a game etc
     }
     
-    private async Task CreateNewGuestPlayer()
+    private async Task CreateNewGuestPlayerAsync()
     {
         var player = new GuestPlayer
         {
@@ -126,7 +126,7 @@ public class GameHub(IConnectionMultiplexer redis, ILogger<GameHub> logger) : Hu
         await Clients.Caller.SendAsync("PlayerConnected", player.Id);
     }
 
-    public async Task JoinMatchmaking(TimeControl timeControl, string playerId)
+    public async Task JoinMatchmakingAsync(TimeControl timeControl, string playerId)
     {
         
     }
