@@ -112,10 +112,14 @@ public class GameHub(IConnectionMultiplexer redis, ILogger<GameHub> logger) : Hu
     
     private async Task CreateNewGuestPlayerAsync()
     {
-        var player = new GuestPlayer
+        var randomNum = new Random().Next(1000, 9999);
+        var guestName = $"Guest#{randomNum}";
+        
+        var player = new GuestPlayer(guestName)
         {
             ConnectionId = Context.ConnectionId
         };
+        
         var playerJson = JsonSerializer.Serialize(player);
         await _db.StringSetAsync(player.RedisKey, playerJson);
         
@@ -123,6 +127,7 @@ public class GameHub(IConnectionMultiplexer redis, ILogger<GameHub> logger) : Hu
         
         logger.LogInformation("New guest player connected: {ConnectionId}, assigned PlayerId: {PlayerId}",
             Context.ConnectionId, player.Id);
+        
         await Clients.Caller.SendAsync("PlayerConnected", player.Id);
     }
 
