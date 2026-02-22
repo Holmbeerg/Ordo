@@ -6,7 +6,7 @@ public class WordDictionaryService(ILogger<WordDictionaryService> logger)
 
     public async Task InitializeAsync()
     {
-        var supportedLanguages = new[] { "swedish", "english" };
+        var supportedLanguages = new[] { "swedish" }; // TODO: add english in the future
         foreach (var language in supportedLanguages)
         {
             await LoadDictionary(language);
@@ -15,7 +15,8 @@ public class WordDictionaryService(ILogger<WordDictionaryService> logger)
 
     private async Task LoadDictionary(string language)
     {
-        var path = $"Words/dictionary-{language}.txt";
+        var basePath = AppContext.BaseDirectory;
+        var path = Path.Combine(basePath, "Words", $"dictionary-{language}.txt");
         if (!File.Exists(path))
         {
             logger.LogWarning("Dictionary file for language {Language} not found at path: {Path}", language, path);

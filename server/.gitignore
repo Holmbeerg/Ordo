@@ -398,6 +398,8 @@ FodyWeavers.xsd
 
 # JetBrains Rider
 *.sln.iml
+.idea/
+
 
 ### DotnetCore ###
 # .NET Core build folders

@@ -1,5 +1,7 @@
 using OrdoApi.Exceptions;
 using OrdoApi.Hubs;
+using OrdoApi.Interfaces;
+using OrdoApi.Services;
 using StackExchange.Redis;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -8,9 +10,13 @@ var builder = WebApplication.CreateBuilder(args);
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
 builder.Services.AddOpenApi();
 builder.Services.AddSignalR();
+builder.Services.AddControllers();
 builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
 
 builder.Services.AddSingleton<IConnectionMultiplexer>(ConnectionMultiplexer.Connect("localhost:6379")); // redis
+builder.Services.AddSingleton<WordDictionaryService>();
+// builder.Services.AddScoped<IMatchmakingService, MatchmakingService>();
+
 
 builder.Services.AddCors(options =>
 {
@@ -37,5 +43,10 @@ app.MapControllers();
 
 app.MapHub<GameHub>("/gameHub");
 
+// probably not the best option
+var wordDictionaryService = app.Services.GetRequiredService<WordDictionaryService>();
+await wordDictionaryService.InitializeAsync();
+
 app.Logger.LogInformation("Starting Ordo backend...");
-app.Run();
+
+await app.RunAsync();

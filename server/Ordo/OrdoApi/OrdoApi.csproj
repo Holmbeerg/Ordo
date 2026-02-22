@@ -13,4 +13,13 @@
         <PackageReference Include="StackExchange.Redis" Version="2.9.11" />
     </ItemGroup>
 
+    <ItemGroup>
+        <None Update="Words\dictionary-swedish.txt">
+            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+        </None>
+        <None Update="Words\words.json">
+            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+        </None>
+    </ItemGroup>
+
 </Project>
