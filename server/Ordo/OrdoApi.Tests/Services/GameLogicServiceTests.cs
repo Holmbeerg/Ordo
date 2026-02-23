@@ -216,6 +216,40 @@ public class GameLogicServiceTests
 
         Assert.False(isValid);
     }
+    
+    [Fact]
+    public void IsMoveValid_ShouldExtractMainWord_AndCrossWords()
+    {
+        var spyDictionary = new SpyDictionaryService();
+        var gameLogic = new GameLogicService(spyDictionary); 
+    
+        var game = new Game();
+        var player = new GuestPlayer("Olof");
+        game.Players.Add(player);
+
+        game.Board.Squares[7, 7].Tile = new Tile { Letter = 'E', Value = 1 };
+        game.Board.Squares[6, 6].Tile = new Tile { Letter = 'O', Value = 2 };
+
+        var tileH = new Tile { Letter = 'H', Value = 4 };
+        var tileJ = new Tile { Letter = 'J', Value = 7 };
+    
+        player.Rack.AddRange([tileH, tileJ]);
+    
+        var placements = new List<TilePlacement>
+        {
+            new(7, 6, tileH),
+            new(7, 8, tileJ)
+        };
+
+        var isValid = gameLogic.IsMoveValid(game, player, placements);
+
+        Assert.True(isValid);
+    
+        Assert.Contains("HEJ", spyDictionary.CheckedWords);
+        Assert.Contains("OH", spyDictionary.CheckedWords);
+    
+        Assert.Equal(2, spyDictionary.CheckedWords.Count); 
+    }
 }
 
 public class FakeDictionaryService : IWordDictionaryService // A simple fake implementation that considers all words valid, since we're only testing move validation logic here
@@ -228,5 +262,18 @@ public class FakeDictionaryService : IWordDictionaryService // A simple fake imp
     public bool IsValidWord(string word, string language)
     {
         return true; 
+    }
+}
+
+public class SpyDictionaryService : IWordDictionaryService // we use this spy to capture the words that GameLogicService checks for validity, so we can assert on them in our tests
+{
+    public List<string> CheckedWords { get; } = [];
+
+    public Task InitializeAsync() => Task.CompletedTask;
+
+    public bool IsValidWord(string word, string language)
+    {
+        CheckedWords.Add(word); 
+        return true;            
     }
 }
