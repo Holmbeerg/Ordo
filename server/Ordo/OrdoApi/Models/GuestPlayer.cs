@@ -1,9 +1,12 @@
 namespace OrdoApi.Models;
 
-public class GuestPlayer(string name) // primary constructor with name parameter
+public class GuestPlayer(string? name = null) 
 {
     public string Id { get; init; } = Guid.NewGuid().ToString();
-    public string Name { get; init; } = name;
+    public string Name { get; set; } = string.IsNullOrWhiteSpace(name) 
+        ? $"Guest-{Random.Shared.Next(1000, 9999)}" 
+        : name;
+
     public string ConnectionId { get; set; } = string.Empty;
     public bool IsOnline { get; set; } = true;
     public string? CurrentGameId { get; init; }

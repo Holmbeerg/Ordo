@@ -5,19 +5,14 @@ namespace OrdoApi.Models;
 public class Game
 {
     public string Id { get; set; } = Guid.NewGuid().ToString();
-    public GameStatus Status { get; set; } = GameStatus.WaitingForPlayers;
-    
-    public Board Board { get; } = new Board();
+    public string Language { get; set; } = "swedish"; 
+    public GameStatus Status { get; private set; } = GameStatus.WaitingForPlayers;
+    public Board Board { get; } = new();
     public List<Tile> TileBag { get; private set; } = TileValues.GetSwedishTileBag();
-    public List<GuestPlayer> Players { get; set; } = [];
+    public List<GuestPlayer> Players { get; } = [];
+    private int CurrentTurnIndex { get; set; }
+    public string? CurrentPlayerId => Players.Count > 0 ? Players[CurrentTurnIndex].Id : null;
 
-    private int CurrentTurnIndex { get; set; } = 0;
-
-    public GuestPlayer? GetCurrentPlayer()
-    {
-        return Players.Count == 0 ? null : Players[CurrentTurnIndex];
-    }
-    
     public void StartGame()
     {
         if (Players.Count != 2)
@@ -46,8 +41,15 @@ public class Game
 
             var tile = TileBag[0];
             TileBag.RemoveAt(0);
-            
+
             player.Rack.Add(tile);
         }
+    }
+
+    public void AdvanceTurn()
+    {
+        if (Players.Count == 0) return;
+
+        CurrentTurnIndex = (CurrentTurnIndex + 1) % Players.Count;
     }
 }
