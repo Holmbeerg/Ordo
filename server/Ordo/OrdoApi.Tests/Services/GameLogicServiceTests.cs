@@ -250,6 +250,61 @@ public class GameLogicServiceTests
     
         Assert.Equal(2, spyDictionary.CheckedWords.Count); 
     }
+    
+    [Fact]
+    public void CalculateScore_ShouldReturnBasicSum_WhenNoMultipliers()
+    {
+        var gameLogic = new GameLogicService(new SpyDictionaryService());
+        var game = new Game();
+
+        var placements = new List<TilePlacement>
+        {
+            new(0, 4, new Tile { Letter = 'H', Value = 3 }),
+            new(0, 5, new Tile { Letter = 'E', Value = 1 }),
+            new(0, 6, new Tile { Letter = 'J', Value = 7 })
+        };
+
+        var score = gameLogic.CalculateScore(game, placements);
+
+        Assert.Equal(11, score);
+    }
+
+    [Fact]
+    public void CalculateScore_ShouldApplyMultipliers_OnlyToNewTiles()
+    {
+        var gameLogic = new GameLogicService(new SpyDictionaryService());
+        var game = new Game(); 
+
+        game.Board.Squares[14, 0].Tile = new Tile { Letter = 'A', Value = 1 };
+
+        var placements = new List<TilePlacement>
+        {
+            new(14, 1, new Tile { Letter = 'R', Value = 1 }),
+            new(14, 2, new Tile { Letter = 'M', Value = 3 }),
+            new(14, 3, new Tile { Letter = 'S', Value = 1 }) 
+        };
+
+        var score = gameLogic.CalculateScore(game, placements);
+
+        Assert.Equal(7, score); 
+    }
+
+    [Fact]
+    public void CalculateScore_ShouldAdd50PointBingoBonus_When7TilesPlaced()
+    {
+        var gameLogic = new GameLogicService(new SpyDictionaryService());
+        var game = new Game();
+    
+        var placements = new List<TilePlacement>();
+        for (var i = 0; i < 7; i++)
+        {
+            placements.Add(new TilePlacement(7, 7 + i, new Tile { Letter = 'A', Value = 1 }));
+        }
+
+        var score = gameLogic.CalculateScore(game, placements);
+
+        Assert.Equal(66, score); // double word + 8 points for tiles (1 dl) + 50 point bingo bonus
+    }
 }
 
 public class FakeDictionaryService : IWordDictionaryService // A simple fake implementation that considers all words valid, since we're only testing move validation logic here

@@ -3,6 +3,8 @@ using OrdoApi.Models;
 
 namespace OrdoApi.Services;
 
+internal record FormedWord(string Text, List<TilePlacement> Placements); 
+
 public class GameLogicService(IWordDictionaryService dictionaryService) : IGameLogicService
 {
     public bool IsMoveValid(Game game, GuestPlayer player, List<TilePlacement> placements)
@@ -40,7 +42,7 @@ public class GameLogicService(IWordDictionaryService dictionaryService) : IGameL
         
         var extractedWords = ExtractAllNewWords(game, placements);
         
-        return extractedWords.All(word => dictionaryService.IsValidWord(word, game.Language));
+        return extractedWords.All(word => dictionaryService.IsValidWord(word.Text, game.Language));
     }
 
     private static bool IsFirstTurnValid(List<TilePlacement> placements)
@@ -108,57 +110,52 @@ public class GameLogicService(IWordDictionaryService dictionaryService) : IGameL
         return placements.All(placement => availableLetters.Remove(placement.Tile.Letter));
     }
     
-    private static string GetFullWord(Game game, List<TilePlacement> placements, int row, int col, bool isHorizontal)
+    private static FormedWord GetFullWord(Game game, List<TilePlacement> newPlacements, int row, int col, bool isHorizontal)
     {
-        var letters = new List<char>();
+        var wordPlacements = new List<TilePlacement>();
 
         if (isHorizontal)
         {
-            // Walk Left to find the very first letter of the word
             var startCol = col;
-            while (GetTileAt(game, placements, row, startCol - 1) != null)
-            {
-                startCol--;
-            }
+            // Walk Left
+            while (GetTileAt(game, newPlacements, row, startCol - 1) != null) startCol--;
 
-            // walk Right, collecting letters until we hit an empty square
+            // Walk Right and collect
             var currentCol = startCol;
             while (true)
             {
-                var tile = GetTileAt(game, placements, row, currentCol);
-                if (tile == null) break; // End of the word
+                var tile = GetTileAt(game, newPlacements, row, currentCol);
+                if (tile == null) break; 
             
-                letters.Add(tile.Letter);
+                wordPlacements.Add(new TilePlacement(row, currentCol, tile));
                 currentCol++;
             }
         }
         else // isVertical
         {
-            // Walk Up to find the very first letter of the word
             var startRow = row;
-            while (GetTileAt(game, placements, startRow - 1, col) != null)
-            {
-                startRow--;
-            }
+            // Walk Up
+            while (GetTileAt(game, newPlacements, startRow - 1, col) != null) startRow--;
 
-            // walk Down, collecting letters
+            // Walk Down and collect
             var currentRow = startRow;
             while (true)
             {
-                var tile = GetTileAt(game, placements, currentRow, col);
-                if (tile == null) break; // End of the word
+                var tile = GetTileAt(game, newPlacements, currentRow, col);
+                if (tile == null) break; 
             
-                letters.Add(tile.Letter);
+                wordPlacements.Add(new TilePlacement(currentRow, col, tile));
                 currentRow++;
             }
         }
 
-        return new string(letters.ToArray());
+        var text = new string(wordPlacements.Select(p => p.Tile.Letter).ToArray());
+        return new FormedWord(text, wordPlacements);
     }
     
-    private static List<string> ExtractAllNewWords(Game game, List<TilePlacement> placements)
+    private static List<FormedWord> ExtractAllNewWords(Game game, List<TilePlacement> placements)
     {
-        var newWords = new List<string>();
+        var newWords = new List<FormedWord>();
         if (placements.Count == 0) return newWords;
 
         // Edge case: They only placed 1 tile
@@ -168,8 +165,8 @@ public class GameLogicService(IWordDictionaryService dictionaryService) : IGameL
             var hWord = GetFullWord(game, placements, p.Row, p.Col, isHorizontal: true);
             var vWord = GetFullWord(game, placements, p.Row, p.Col, isHorizontal: false);
         
-            if (hWord.Length > 1) newWords.Add(hWord);
-            if (vWord.Length > 1) newWords.Add(vWord);
+            if (hWord.Text.Length > 1) newWords.Add(hWord);
+            if (vWord.Text.Length > 1) newWords.Add(vWord);
         
             return newWords;
         }
@@ -178,13 +175,13 @@ public class GameLogicService(IWordDictionaryService dictionaryService) : IGameL
         var isMainHorizontal = placements[0].Row == placements[1].Row;
         
         var mainWord = GetFullWord(game, placements, placements[0].Row, placements[0].Col, isMainHorizontal);
-        if (mainWord.Length > 1) newWords.Add(mainWord);
+        if (mainWord.Text.Length > 1) newWords.Add(mainWord);
 
         // Grab any "cross words" formed by the individual tiles touching existing board tiles
         foreach (var p in placements)
         {
             var crossWord = GetFullWord(game, placements, p.Row, p.Col, !isMainHorizontal);
-            if (crossWord.Length > 1) newWords.Add(crossWord);
+            if (crossWord.Text.Length > 1) newWords.Add(crossWord);
         }
 
         return newWords;
@@ -203,7 +200,54 @@ public class GameLogicService(IWordDictionaryService dictionaryService) : IGameL
     
     public int CalculateScore(Game game, List<TilePlacement> placements)
     {
-        throw new NotImplementedException("N/A");
+        var extractedWords = ExtractAllNewWords(game, placements);
+        var totalTurnScore = 0;
+
+        foreach (var word in extractedWords)
+        {
+            var wordScore = 0;
+            var wordMultiplier = 1;
+
+            foreach (var wp in word.Placements)
+            {
+                var letterScore = wp.Tile.Value;
+
+                // multipliers only apply to the newly placed tiles, not existing tiles that are part of the word
+                var isNewPlacement = placements.Any(p => p.Row == wp.Row && p.Col == wp.Col);
+
+                if (isNewPlacement)
+                {
+                    var square = game.Board.Squares[wp.Row, wp.Col];
+                
+                    switch (square.Multiplier)
+                    {
+                        case MultiplierType.DoubleLetter:
+                            letterScore *= 2;
+                            break;
+                        case MultiplierType.TripleLetter:
+                            letterScore *= 3;
+                            break;
+                        case MultiplierType.DoubleWord:
+                            wordMultiplier *= 2;
+                            break;
+                        case MultiplierType.TripleWord:
+                            wordMultiplier *= 3;
+                            break;
+                    }
+                }
+
+                wordScore += letterScore;
+            }
+
+            totalTurnScore += (wordScore * wordMultiplier);
+        }
+
+        if (placements.Count == 7)
+        {
+            totalTurnScore += 50; 
+        }
+
+        return totalTurnScore;
     }
 
     public void ExecuteMove(Game game, GuestPlayer player, List<TilePlacement> placements)
