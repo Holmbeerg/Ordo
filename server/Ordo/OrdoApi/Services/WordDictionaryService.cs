@@ -1,6 +1,6 @@
 namespace OrdoApi.Services;
 
-public class WordDictionaryService(ILogger<WordDictionaryService> logger)
+public class WordDictionaryService(ILogger<WordDictionaryService> logger) : IWordDictionaryService
 {
     private readonly Dictionary<string, HashSet<string>> _dictionaries = new();
 
