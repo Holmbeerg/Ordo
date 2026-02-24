@@ -305,6 +305,44 @@ public class GameLogicServiceTests
 
         Assert.Equal(66, score); // double word + 8 points for tiles (1 dl) + 50 point bingo bonus
     }
+    
+    [Fact]
+    public void ExecuteMove_ShouldUpdateBoard_Score_Rack_AndAdvanceTurn()
+    {
+        var gameLogic = new GameLogicService(new SpyDictionaryService());
+        var game = new Game();
+    
+        var player1 = new GuestPlayer("Olof");
+        var player2 = new GuestPlayer("Gudrun");
+        game.Players.Add(player1);
+        game.Players.Add(player2);
+
+        Assert.Equal(player1.Id, game.CurrentPlayerId);
+
+        var initialBagCount = game.TileBag.Count;
+
+        var tileA = new Tile { Letter = 'A', Value = 1 };
+        var tileB = new Tile { Letter = 'B', Value = 3 };
+        player1.Rack.AddRange([tileA, tileB, new Tile(), new Tile(), new Tile(), new Tile(), new Tile()]);
+
+        var placements = new List<TilePlacement>
+        {
+            new(0, 4, tileA),
+            new(0, 5, tileB)
+        };
+
+        gameLogic.ExecuteMove(game, player1, placements);
+
+        Assert.Equal(4, player1.Score); 
+        Assert.NotNull(game.Board.Squares[0, 4].Tile); 
+        Assert.Equal('A', game.Board.Squares[0, 4].Tile!.Letter);
+
+        Assert.Equal(7, player1.Rack.Count); 
+        Assert.DoesNotContain(tileA, player1.Rack); 
+        Assert.Equal(initialBagCount - 2, game.TileBag.Count); 
+
+        Assert.Equal(player2.Id, game.CurrentPlayerId);
+    }
 }
 
 public class FakeDictionaryService : IWordDictionaryService // A simple fake implementation that considers all words valid, since we're only testing move validation logic here

@@ -3,7 +3,7 @@ using OrdoApi.Models;
 
 namespace OrdoApi.Services;
 
-internal record FormedWord(string Text, List<TilePlacement> Placements); 
+internal record FormedWord(string Text, List<TilePlacement> Placements);
 
 public class GameLogicService(IWordDictionaryService dictionaryService) : IGameLogicService
 {
@@ -39,9 +39,9 @@ public class GameLogicService(IWordDictionaryService dictionaryService) : IGameL
         {
             return false;
         }
-        
+
         var extractedWords = ExtractAllNewWords(game, placements);
-        
+
         return extractedWords.All(word => dictionaryService.IsValidWord(word.Text, game.Language));
     }
 
@@ -109,8 +109,9 @@ public class GameLogicService(IWordDictionaryService dictionaryService) : IGameL
 
         return placements.All(placement => availableLetters.Remove(placement.Tile.Letter));
     }
-    
-    private static FormedWord GetFullWord(Game game, List<TilePlacement> newPlacements, int row, int col, bool isHorizontal)
+
+    private static FormedWord GetFullWord(Game game, List<TilePlacement> newPlacements, int row, int col,
+        bool isHorizontal)
     {
         var wordPlacements = new List<TilePlacement>();
 
@@ -125,8 +126,8 @@ public class GameLogicService(IWordDictionaryService dictionaryService) : IGameL
             while (true)
             {
                 var tile = GetTileAt(game, newPlacements, row, currentCol);
-                if (tile == null) break; 
-            
+                if (tile == null) break;
+
                 wordPlacements.Add(new TilePlacement(row, currentCol, tile));
                 currentCol++;
             }
@@ -142,8 +143,8 @@ public class GameLogicService(IWordDictionaryService dictionaryService) : IGameL
             while (true)
             {
                 var tile = GetTileAt(game, newPlacements, currentRow, col);
-                if (tile == null) break; 
-            
+                if (tile == null) break;
+
                 wordPlacements.Add(new TilePlacement(currentRow, col, tile));
                 currentRow++;
             }
@@ -152,7 +153,7 @@ public class GameLogicService(IWordDictionaryService dictionaryService) : IGameL
         var text = new string(wordPlacements.Select(p => p.Tile.Letter).ToArray());
         return new FormedWord(text, wordPlacements);
     }
-    
+
     private static List<FormedWord> ExtractAllNewWords(Game game, List<TilePlacement> placements)
     {
         var newWords = new List<FormedWord>();
@@ -164,16 +165,16 @@ public class GameLogicService(IWordDictionaryService dictionaryService) : IGameL
             var p = placements[0];
             var hWord = GetFullWord(game, placements, p.Row, p.Col, isHorizontal: true);
             var vWord = GetFullWord(game, placements, p.Row, p.Col, isHorizontal: false);
-        
+
             if (hWord.Text.Length > 1) newWords.Add(hWord);
             if (vWord.Text.Length > 1) newWords.Add(vWord);
-        
+
             return newWords;
         }
 
         // Standard case: They placed multiple tiles, so there is a clear "main" axis
         var isMainHorizontal = placements[0].Row == placements[1].Row;
-        
+
         var mainWord = GetFullWord(game, placements, placements[0].Row, placements[0].Col, isMainHorizontal);
         if (mainWord.Text.Length > 1) newWords.Add(mainWord);
 
@@ -193,11 +194,11 @@ public class GameLogicService(IWordDictionaryService dictionaryService) : IGameL
 
         // First, check if the player is placing a tile exactly here right now
         var placement = placements.FirstOrDefault(p => p.Row == row && p.Col == col);
-       
+
         // Otherwise, check what is actually sitting on the board
         return placement != null ? placement.Tile : game.Board.Squares[row, col].Tile;
     }
-    
+
     public int CalculateScore(Game game, List<TilePlacement> placements)
     {
         var extractedWords = ExtractAllNewWords(game, placements);
@@ -218,7 +219,7 @@ public class GameLogicService(IWordDictionaryService dictionaryService) : IGameL
                 if (isNewPlacement)
                 {
                     var square = game.Board.Squares[wp.Row, wp.Col];
-                
+
                     switch (square.Multiplier)
                     {
                         case MultiplierType.DoubleLetter:
@@ -244,7 +245,7 @@ public class GameLogicService(IWordDictionaryService dictionaryService) : IGameL
 
         if (placements.Count == 7)
         {
-            totalTurnScore += 50; 
+            totalTurnScore += 50;
         }
 
         return totalTurnScore;
@@ -252,6 +253,22 @@ public class GameLogicService(IWordDictionaryService dictionaryService) : IGameL
 
     public void ExecuteMove(Game game, GuestPlayer player, List<TilePlacement> placements)
     {
-        throw new NotImplementedException("N/A");
+        var moveScore = CalculateScore(game, placements);
+        player.Score += moveScore;
+
+        foreach (var placement in placements)
+        {
+            game.Board.Squares[placement.Row, placement.Col].Tile = placement.Tile;
+
+            var rackTile = player.Rack.FirstOrDefault(t =>
+                t.Letter == placement.Tile.Letter && t.IsBlank == placement.Tile.IsBlank);
+            if (rackTile != null)
+            {
+                player.Rack.Remove(rackTile);
+            }
+        }
+
+        game.DrawTiles(player, placements.Count);
+        game.AdvanceTurn();
     }
 }
