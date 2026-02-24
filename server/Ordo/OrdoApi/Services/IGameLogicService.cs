@@ -4,7 +4,7 @@ namespace OrdoApi.Interfaces;
 
 public interface IGameLogicService
 {
-    bool IsMoveValid(Game game, GuestPlayer player, List<TilePlacement> placements);
+    bool ValidateMove(Game game, GuestPlayer player, List<TilePlacement> placements);
 
     int CalculateScore(Game game, List<TilePlacement> placements);
 

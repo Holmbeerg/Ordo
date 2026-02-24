@@ -7,7 +7,7 @@ internal record FormedWord(string Text, List<TilePlacement> Placements);
 
 public class GameLogicService(IWordDictionaryService dictionaryService) : IGameLogicService
 {
-    public bool IsMoveValid(Game game, GuestPlayer player, List<TilePlacement> placements)
+    public bool ValidateMove(Game game, GuestPlayer player, List<TilePlacement> placements)
     {
         if (placements.Count == 0) return false;
 
@@ -198,6 +198,32 @@ public class GameLogicService(IWordDictionaryService dictionaryService) : IGameL
         // Otherwise, check what is actually sitting on the board
         return placement != null ? placement.Tile : game.Board.Squares[row, col].Tile;
     }
+    
+    public void SwapTiles(Game game, GuestPlayer player, List<Tile> tilesToSwap)
+    {
+        // Scrabble rule says you can only swap if there are at least 7 tiles left in the bag
+        if (game.TileBag.Count < 7)
+        {
+            throw new InvalidOperationException("You cannot swap tiles when there are fewer than 7 tiles left in the bag.");
+        }
+
+        foreach (var tileToSwap in tilesToSwap)
+        {
+            var tileInRack = player.Rack.FirstOrDefault(t => t.Letter == tileToSwap.Letter);
+            if (tileInRack == null)
+            {
+                throw new InvalidOperationException($"You do not have the letter {tileToSwap.Letter} in your rack.");
+            }
+            player.Rack.Remove(tileInRack);
+        
+            // Add it back to the bag
+            game.TileBag.Add(tileInRack);
+        }
+
+        game.ShuffleBag();
+        game.DrawTiles(player, tilesToSwap.Count);
+        game.AdvanceTurn();
+    }
 
     public int CalculateScore(Game game, List<TilePlacement> placements)
     {
@@ -269,6 +295,13 @@ public class GameLogicService(IWordDictionaryService dictionaryService) : IGameL
         }
 
         game.DrawTiles(player, placements.Count);
+
+        if (game.TileBag.Count == 0 && player.Rack.Count == 0)
+        {
+            game.Status = GameStatus.Completed;
+            return;
+        }
+
         game.AdvanceTurn();
     }
 }

@@ -14,7 +14,7 @@ public class GameLogicServiceTests
         var player = new GuestPlayer("Olof");
         var placements = new List<TilePlacement>();
 
-        var isValid = _gameLogic.IsMoveValid(game, player, placements);
+        var isValid = _gameLogic.ValidateMove(game, player, placements);
 
         Assert.False(isValid);
     }
@@ -35,7 +35,7 @@ public class GameLogicServiceTests
             new(7, 9, player.Rack[2])
         };
 
-        var isValid = _gameLogic.IsMoveValid(game, player, placements);
+        var isValid = _gameLogic.ValidateMove(game, player, placements);
 
         Assert.True(isValid);
     }
@@ -54,7 +54,7 @@ public class GameLogicServiceTests
             new(0, 2, tile)
         };
 
-        var isValid = _gameLogic.IsMoveValid(game, player, placements);
+        var isValid = _gameLogic.ValidateMove(game, player, placements);
 
         Assert.False(isValid); 
     }
@@ -73,7 +73,7 @@ public class GameLogicServiceTests
             new(9, 9, tile)
         };
 
-        var isValid = _gameLogic.IsMoveValid(game, player, placements);
+        var isValid = _gameLogic.ValidateMove(game, player, placements);
 
         Assert.False(isValid);
     }
@@ -92,7 +92,7 @@ public class GameLogicServiceTests
             new(8, 7, tile)  
         };
 
-        var isValid = _gameLogic.IsMoveValid(game, player, placements);
+        var isValid = _gameLogic.ValidateMove(game, player, placements);
 
         Assert.False(isValid);
     }
@@ -110,7 +110,7 @@ public class GameLogicServiceTests
             new(7, 9, tile)
         };
 
-        var isValid = _gameLogic.IsMoveValid(game, player, placements);
+        var isValid = _gameLogic.ValidateMove(game, player, placements);
 
         Assert.False(isValid);
     }
@@ -134,7 +134,7 @@ public class GameLogicServiceTests
             new(7, 9, player.Rack[1])
         };
 
-        var isValid = _gameLogic.IsMoveValid(game, player, placements);
+        var isValid = _gameLogic.ValidateMove(game, player, placements);
 
         Assert.True(isValid);
     }
@@ -154,7 +154,7 @@ public class GameLogicServiceTests
             new(0, 1, tile)
         };
 
-        var isValid = _gameLogic.IsMoveValid(game, player, placements);
+        var isValid = _gameLogic.ValidateMove(game, player, placements);
 
         Assert.False(isValid);
     }
@@ -175,7 +175,7 @@ public class GameLogicServiceTests
             new(5, 7, player.Rack[1])
         };
 
-        var isValid = _gameLogic.IsMoveValid(game, player, placements);
+        var isValid = _gameLogic.ValidateMove(game, player, placements);
 
         Assert.True(isValid);
     }
@@ -192,7 +192,7 @@ public class GameLogicServiceTests
             new(15, 7, tile) 
         };
 
-        var isValid = _gameLogic.IsMoveValid(game, player, placements);
+        var isValid = _gameLogic.ValidateMove(game, player, placements);
 
         Assert.False(isValid);
     }
@@ -212,7 +212,7 @@ public class GameLogicServiceTests
             new(7, 7, tile2) 
         };
 
-        var isValid = _gameLogic.IsMoveValid(game, player, placements);
+        var isValid = _gameLogic.ValidateMove(game, player, placements);
 
         Assert.False(isValid);
     }
@@ -241,7 +241,7 @@ public class GameLogicServiceTests
             new(7, 8, tileJ)
         };
 
-        var isValid = gameLogic.IsMoveValid(game, player, placements);
+        var isValid = gameLogic.ValidateMove(game, player, placements);
 
         Assert.True(isValid);
     

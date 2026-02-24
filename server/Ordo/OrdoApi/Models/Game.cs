@@ -6,7 +6,7 @@ public class Game
 {
     public string Id { get; set; } = Guid.NewGuid().ToString();
     public string Language { get; set; } = "swedish"; 
-    public GameStatus Status { get; private set; } = GameStatus.WaitingForPlayers;
+    public GameStatus Status { get; set; } = GameStatus.WaitingForPlayers;
     public Board Board { get; } = new();
     public List<Tile> TileBag { get; private set; } = TileValues.GetSwedishTileBag();
     public List<GuestPlayer> Players { get; } = [];
@@ -22,9 +22,8 @@ public class Game
 
         Status = GameStatus.InProgress;
 
-        var random = new Random();
-        TileBag = TileBag.OrderBy(_ => random.Next()).ToList();
-
+        ShuffleBag();
+        
         foreach (var player in Players)
         {
             DrawTiles(player, 7);
@@ -44,6 +43,12 @@ public class Game
 
             player.Rack.Add(tile);
         }
+    }
+    
+    public void ShuffleBag()
+    {
+        var random = new Random();
+        TileBag = TileBag.OrderBy(_ => random.Next()).ToList();
     }
 
     public void AdvanceTurn()
