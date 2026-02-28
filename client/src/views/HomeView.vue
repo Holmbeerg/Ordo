@@ -59,69 +59,27 @@
 </template>
 
 <script setup lang="ts">
-import {ref, onUnmounted} from 'vue';
-import {useRouter} from 'vue-router';
 import { useI18n } from 'vue-i18n';
-import type {TimeControl} from "@/types/TimeControl.ts";
-// TODO: import { joinQueue, leaveQueue } from '../services/socket' or something;
-useRouter();
-const searching = ref(false);
-const { t } = useI18n();
-const currentMode = ref<TimeControl>('blitz')
-const searchTimeSeconds = ref(0);
-let searchTimer: number | null = null;
+import type { TimeControl } from "@/types/TimeControl.ts";
+import { useMatchmaking } from '@/composables/useMatchmaking.ts';
 
-const formatTimeControl = (timeControl: TimeControl): string => { // arrow function
+const { t } = useI18n();
+const { searching, currentMode, searchTimeSeconds, startSearch, cancelSearch } = useMatchmaking();
+
+const formatTimeControl = (timeControl: TimeControl): string => {
   switch (timeControl) {
-    case 'bullet':
-      return 'Bullet (1+1)';
-    case 'blitz':
-      return 'Blitz (3+0)';
-    case 'rapid':
-      return 'Rapid (5+0)';
-    case 'classical':
-      return t('home.classical');
-    default:
-      return timeControl;
+    case 'bullet': return 'Bullet (1+1)';
+    case 'blitz': return 'Blitz (3+0)';
+    case 'rapid': return 'Rapid (5+0)';
+    case 'classical': return t('home.classical');
+    default: return timeControl;
   }
 };
 
 const formatSearchTime = (seconds: number): string => {
-  if (seconds < 60) {
-    return `${t('home.searchingFor')} ${seconds} ${t('home.seconds')}`;
-  }
+  if (seconds < 60) return `${t('home.searchingFor')} ${seconds} ${t('home.seconds')}`;
   const minutes = Math.floor(seconds / 60);
-  const remainingSeconds = seconds % 60;
-  return `${t('home.searchingFor')} ${minutes}:${remainingSeconds < 10 ? '0' : ''}${remainingSeconds}`;
+  const remaining = seconds % 60;
+  return `${t('home.searchingFor')} ${minutes}:${remaining < 10 ? '0' : ''}${remaining}`;
 };
-
-const startSearch = (mode: TimeControl) => {
-  searching.value = true;
-  currentMode.value = mode;
-  searchTimeSeconds.value = 0;
-
-  searchTimer = window.setInterval(() => {
-    searchTimeSeconds.value++;
-  }, 1000);
-
-  // joinQueue(mode);
-};
-
-const cancelSearch = () => {
-  if (searchTimer !== null) {
-    clearInterval(searchTimer);
-    searchTimer = null;
-  }
-  searching.value = false;
-  searchTimeSeconds.value = 0;
-
-  // leaveQueue();
-};
-
-
-onUnmounted(() => {
-  if (searchTimer !== null) {
-    clearInterval(searchTimer);
-  }
-});
 </script>
