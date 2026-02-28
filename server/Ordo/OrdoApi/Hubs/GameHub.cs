@@ -8,7 +8,7 @@ namespace OrdoApi.Hubs;
 
 public static class GameEvents
 {
-    public const string GameStateUpdated = "GameStateUpdated";
+    public const string ReceiveGameState = "ReceiveGameState";
     public const string MatchFound = "MatchFound";
     public const string WaitingForMatch = "WaitingForMatch";
     public const string PlayerConnected = "PlayerConnected";
@@ -180,17 +180,16 @@ public class GameHub(IConnectionMultiplexer redis, ILogger<GameHub> logger, Game
         await Clients.Caller.SendAsync(GameEvents.ReceiveError, "It is not your turn!");
         return false;
     }
-
-    private async Task SaveAndBroadcastGameStateAsync(Game game, GuestPlayer currentPlayer)
+    
+    private async Task SaveAndBroadcastGameStateAsync(Game game)
     {
         await _db.StringSetAsync($"game:{game.Id}", JsonSerializer.Serialize(game));
 
-        await Clients.Caller.SendAsync(GameEvents.GameStateUpdated);
-
-        var opponent = game.Players.First(p => p.Id != currentPlayer.Id);
-        if (!string.IsNullOrEmpty(opponent.ConnectionId))
+        foreach (var player in game.Players)
         {
-            await Clients.Client(opponent.ConnectionId).SendAsync(GameEvents.GameStateUpdated);
+            if (string.IsNullOrEmpty(player.ConnectionId)) continue;
+            var dto = CreateGameStateDto(game, player.Id);
+            await Clients.Client(player.ConnectionId).SendAsync(GameEvents.ReceiveGameState, dto);
         }
     }
 
@@ -256,27 +255,7 @@ public class GameHub(IConnectionMultiplexer redis, ILogger<GameHub> logger, Game
         if (gameJson.IsNullOrEmpty) return null;
 
         var game = JsonSerializer.Deserialize<Game>(gameJson!);
-        if (game == null) return null;
-
-        var requestingPlayer = game.Players.FirstOrDefault(p => p.Id == playerId);
-        var opponentPlayer = game.Players.FirstOrDefault(p => p.Id != playerId);
-
-        if (requestingPlayer == null) return null;
-
-        return new GameStateDto(
-            game.Id,
-            game.Status.ToString(),
-            game.CurrentPlayerId,
-            game.Board,
-            requestingPlayer.Id,
-            requestingPlayer.Rack,
-            requestingPlayer.Score,
-            opponentPlayer?.Id,
-            opponentPlayer?.Name,
-            opponentPlayer?.Score ?? 0,
-            opponentPlayer?.Rack.Count ?? 0,
-            game.TileBag.Count
-        );
+        return game == null ? null : CreateGameStateDto(game, playerId.ToString());
     }
 
     public async Task SubmitMove(string gameId, List<TilePlacement> placements)
@@ -294,7 +273,7 @@ public class GameHub(IConnectionMultiplexer redis, ILogger<GameHub> logger, Game
             gameLogic.ValidateMove(game, player, placements);
             gameLogic.ExecuteMove(game, player, placements);
 
-            await SaveAndBroadcastGameStateAsync(game, player);
+            await SaveAndBroadcastGameStateAsync(game);
 
             if (game.Status == GameStatus.Completed)
             {
@@ -323,11 +302,9 @@ public class GameHub(IConnectionMultiplexer redis, ILogger<GameHub> logger, Game
         var (game, playerIdStr) = context.Value;
         if (!await ValidatePlayerTurnAsync(game, playerIdStr)) return;
 
-        var player = game.Players.First(p => p.Id == playerIdStr);
-
         game.AdvanceTurn();
 
-        await SaveAndBroadcastGameStateAsync(game, player);
+        await SaveAndBroadcastGameStateAsync(game);
 
         logger.LogInformation("Player {PlayerId} passed their turn in game {GameId}", playerIdStr, gameId);
     }
@@ -346,7 +323,7 @@ public class GameHub(IConnectionMultiplexer redis, ILogger<GameHub> logger, Game
         {
             gameLogic.SwapTiles(game, player, tilesToSwap);
 
-            await SaveAndBroadcastGameStateAsync(game, player);
+            await SaveAndBroadcastGameStateAsync(game);
 
             logger.LogInformation("Player {PlayerId} swapped {Count} tiles in game {GameId}", player.Id,
                 tilesToSwap.Count, gameId);
@@ -356,5 +333,28 @@ public class GameHub(IConnectionMultiplexer redis, ILogger<GameHub> logger, Game
             logger.LogWarning(ex, "Invalid tile swap attempted by {PlayerId}", player.Id);
             await Clients.Caller.SendAsync(GameEvents.ReceiveError, ex.Message);
         }
+    }
+    
+    private GameStateDto CreateGameStateDto(Game game, string targetPlayerId)
+    {
+        var requestingPlayer = game.Players.FirstOrDefault(p => p.Id == targetPlayerId);
+        var opponentPlayer = game.Players.FirstOrDefault(p => p.Id != targetPlayerId);
+
+        if (requestingPlayer == null) throw new Exception("Player not found in game.");
+
+        return new GameStateDto(
+            game.Id,
+            game.Status.ToString(),
+            game.CurrentPlayerId,
+            game.Board,
+            requestingPlayer.Id,
+            requestingPlayer.Rack,
+            requestingPlayer.Score,
+            opponentPlayer?.Id,
+            opponentPlayer?.Name,
+            opponentPlayer?.Score ?? 0,
+            opponentPlayer?.Rack.Count ?? 0,
+            game.TileBag.Count
+        );
     }
 }

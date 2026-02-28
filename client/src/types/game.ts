@@ -1,20 +1,43 @@
+export type MultiplierType = 'None' | 'DoubleLetter' | 'TripleLetter' | 'DoubleWord' | 'TripleWord';
+
+export type GameStatus = 'WaitingForPlayers' | 'InProgress' | 'Completed';
+
 export interface Tile {
-    id: number;
+    id: string;
     letter: string;
     value: number;
+    isBlank: boolean;
 }
 
-export interface Player {
-    id: string;
-    name: string;
-    score: number;
-    tiles: Tile[];
+export interface Square {
+    multiplier: MultiplierType;
+    tile: Tile | null;
 }
 
-export interface GameState {
-    id: string;
-    board: (Tile | null)[][];
-    tileBagCount: number;
-    currentTurnPlayerId: string;
-    isGameOver: boolean;
+export interface Board {
+    squares: Square[][];
+}
+
+export interface TilePlacement {
+    row: number;
+    col: number;
+    tile: Tile;
+}
+
+export interface GameStateDto {
+    gameId: string;
+    status: GameStatus;
+    currentTurnPlayerId: string | null;
+    board: Board;
+
+    myPlayerId: string;
+    myRack: Tile[];
+    myScore: number;
+
+    opponentId: string | null;
+    opponentName: string | null;
+    opponentScore: number;
+    opponentRackCount: number;
+
+    tilesRemainingInBag: number;
 }
