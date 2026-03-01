@@ -62,7 +62,7 @@ public class GameHub(IConnectionMultiplexer redis, ILogger<GameHub> logger, IGam
 
             if (!playerJson.IsNullOrEmpty)
             {
-                var player = JsonSerializer.Deserialize<GuestPlayer>(playerJson!);
+                var player = JsonSerializer.Deserialize<GuestPlayer>((string)playerJson!);
                 if (player != null)
                 {
                     player.IsOnline = false;
@@ -100,7 +100,7 @@ public class GameHub(IConnectionMultiplexer redis, ILogger<GameHub> logger, IGam
             return;
         }
 
-        var player = JsonSerializer.Deserialize<GuestPlayer>(playerJson!);
+        var player = JsonSerializer.Deserialize<GuestPlayer>((string)playerJson!);
         if (player == null)
         {
             logger.LogWarning(
@@ -158,7 +158,7 @@ public class GameHub(IConnectionMultiplexer redis, ILogger<GameHub> logger, IGam
         var gameJson = await _db.StringGetAsync($"game:{player.CurrentGameId}");
         if (gameJson.IsNullOrEmpty) return;
 
-        var game = JsonSerializer.Deserialize<Game>(gameJson!);
+        var game = JsonSerializer.Deserialize<Game>((string)gameJson!);
         if (game == null) return;
 
         var opponent = game.Players.FirstOrDefault(p => p.Id != player.Id);
@@ -178,7 +178,7 @@ public class GameHub(IConnectionMultiplexer redis, ILogger<GameHub> logger, IGam
         var gameJson = await _db.StringGetAsync($"game:{gameId}");
         if (gameJson.IsNullOrEmpty) return null;
 
-        var game = JsonSerializer.Deserialize<Game>(gameJson!);
+        var game = JsonSerializer.Deserialize<Game>((string)gameJson!);
         if (game == null) return null;
 
         return (game, playerIdStr.ToString());
@@ -242,8 +242,8 @@ public class GameHub(IConnectionMultiplexer redis, ILogger<GameHub> logger, IGam
             var opponentJson = await _db.StringGetAsync($"guest_player:{opponentId}");
             var playerJson = await _db.StringGetAsync($"guest_player:{playerId}");
 
-            var opponent = JsonSerializer.Deserialize<GuestPlayer>(opponentJson!);
-            var player = JsonSerializer.Deserialize<GuestPlayer>(playerJson!);
+            var opponent = JsonSerializer.Deserialize<GuestPlayer>((string)opponentJson!);
+            var player = JsonSerializer.Deserialize<GuestPlayer>((string)playerJson!);
 
             var newGame = new Game();
             newGame.Players.Add(opponent!);
@@ -292,7 +292,7 @@ public class GameHub(IConnectionMultiplexer redis, ILogger<GameHub> logger, IGam
         var gameJson = await _db.StringGetAsync($"game:{gameId}");
         if (gameJson.IsNullOrEmpty) return null;
 
-        var game = JsonSerializer.Deserialize<Game>(gameJson!);
+        var game = JsonSerializer.Deserialize<Game>((string)gameJson!);
         return game == null ? null : CreateGameStateDto(game, playerId.ToString());
     }
 
