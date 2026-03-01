@@ -7,7 +7,7 @@ public class GuestPlayer(string? name = null)
         ? $"Guest-{Random.Shared.Next(1000, 9999)}" 
         : name;
 
-    public string ConnectionId { get; set; } = string.Empty;
+    public string? ConnectionId { get; set; } = string.Empty;
     public bool IsOnline { get; set; } = true;
     public string? CurrentGameId { get; set; }
     public DateTime LastConnected { get; set; } = DateTime.UtcNow;

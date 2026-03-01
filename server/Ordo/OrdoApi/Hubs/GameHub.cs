@@ -1,5 +1,6 @@
 using System.Text.Json;
 using Microsoft.AspNetCore.SignalR;
+using OrdoApi.Extensions;
 using OrdoApi.Interfaces;
 using OrdoApi.Models;
 using OrdoApi.Services;
@@ -21,7 +22,7 @@ public static class GameEvents
 
 // https://learn.microsoft.com/en-us/aspnet/core/signalr/hubs?view=aspnetcore-9.0
 // TODO: look into refactor using groups
-public class GameHub(IConnectionMultiplexer redis, ILogger<GameHub> logger, IGameLogicService gameLogic) : Hub
+public class GameHub(IConnectionMultiplexer redis, ILogger<GameHub> logger, IGameLogicService gameLogic, IMatchmakingService matchmaking) : Hub
 {
     private readonly IDatabase _db = redis.GetDatabase();
 
@@ -205,83 +206,33 @@ public class GameHub(IConnectionMultiplexer redis, ILogger<GameHub> logger, IGam
         foreach (var player in game.Players)
         {
             if (string.IsNullOrEmpty(player.ConnectionId)) continue;
-            var dto = CreateGameStateDto(game, player.Id);
+            var dto = game.ToGameStateDto(player.Id);
             await Clients.Client(player.ConnectionId).SendAsync(GameEvents.ReceiveGameState, dto);
         }
     }
 
     public async Task JoinMatchmaking(TimeControl timeControl, string playerId)
     {
-        var queueKey =
-            $"matchmaking:{timeControl.ToString().ToLower()}"; // adjust to language specific when we add that feature
+        var result = await matchmaking.JoinQueueAsync(playerId, timeControl);
 
-        logger.LogInformation("Player {PlayerId} is searching for a {TimeControl} match.", playerId, timeControl);
-
-        // Try to grab an opponent from the front of the line
-        var opponentId = await _db.ListLeftPopAsync(queueKey);
-
-        if (opponentId.IsNullOrEmpty)
+        switch (result)
         {
-            await _db.ListRightPushAsync(queueKey, playerId);
+            case QueuedResult:
+                await Clients.Caller.SendAsync(GameEvents.WaitingForMatch);
+                break;
 
-            await Clients.Caller.SendAsync(
-                GameEvents.WaitingForMatch); // tell the client to show a "waiting for match" message or spinner
-            logger.LogInformation("Player {PlayerId} is waiting in queue: {QueueKey}", playerId, queueKey);
-        }
-        else if (opponentId == playerId)
-        {
-            // if the playerId is the same as the opponentId, it means they were the only one in the queue and got popped out by their own request. We need to put them back in.
-            await _db.ListRightPushAsync(queueKey, playerId);
-            await Clients.Caller.SendAsync(GameEvents.WaitingForMatch);
-        }
-        else
-        {
-            logger.LogInformation("Match found! {Player1} vs {Player2} for {TimeControl}", opponentId, playerId,
-                timeControl);
+            case MatchFoundResult match:
+                await Clients.Caller.SendAsync(GameEvents.MatchFound, match.Player1State);
 
-            var opponentJson = await _db.StringGetAsync($"guest_player:{opponentId}");
-            var playerJson = await _db.StringGetAsync($"guest_player:{playerId}");
-
-            var opponent = JsonSerializer.Deserialize<GuestPlayer>((string)opponentJson!);
-            var player = JsonSerializer.Deserialize<GuestPlayer>((string)playerJson!);
-
-            var newGame = new Game();
-            newGame.Players.Add(opponent!);
-            newGame.Players.Add(player!);
-
-            newGame.StartGame();
-
-            // Store current game on each player so we can look it up from connection events
-            opponent!.CurrentGameId = newGame.Id;
-            player!.CurrentGameId = newGame.Id;
-            await _db.StringSetAsync($"guest_player:{opponent.Id}", JsonSerializer.Serialize(opponent));
-            await _db.StringSetAsync($"guest_player:{player.Id}", JsonSerializer.Serialize(player));
-
-            await _db.StringSetAsync($"game:{newGame.Id}", JsonSerializer.Serialize(newGame));
-
-            var playerDto = CreateGameStateDto(newGame, player.Id);
-            var opponentDto = CreateGameStateDto(newGame, opponent.Id);
-
-            await Clients.Caller.SendAsync(GameEvents.MatchFound, playerDto);
-
-            var opponentConnectionId = opponent.ConnectionId;
-            if (!string.IsNullOrEmpty(opponentConnectionId))
-            {
-                await Clients.Client(opponentConnectionId).SendAsync(GameEvents.MatchFound, opponentDto);
-            }
+                if (!string.IsNullOrEmpty(match.Player2ConnectionId))
+                    await Clients.Client(match.Player2ConnectionId).SendAsync(GameEvents.MatchFound, match.Player2State);
+                break;
         }
     }
 
     public async Task LeaveMatchmaking(TimeControl timeControl, string playerId)
     {
-        var queueKey = $"matchmaking:{timeControl.ToString().ToLower()}";
-
-        var removed = await _db.ListRemoveAsync(queueKey, playerId);
-
-        if (removed > 0)
-            logger.LogInformation("Player {PlayerId} left the {TimeControl} matchmaking queue.", playerId, timeControl);
-        else
-            logger.LogWarning("Player {PlayerId} tried to leave {TimeControl} queue but was not found.", playerId, timeControl);
+        await matchmaking.LeaveQueueAsync(playerId, timeControl);
     }
 
     public async Task<GameStateDto?> GetGameState(string gameId)
@@ -293,7 +244,7 @@ public class GameHub(IConnectionMultiplexer redis, ILogger<GameHub> logger, IGam
         if (gameJson.IsNullOrEmpty) return null;
 
         var game = JsonSerializer.Deserialize<Game>((string)gameJson!);
-        return game == null ? null : CreateGameStateDto(game, playerId.ToString());
+        return game?.ToGameStateDto(playerId.ToString());
     }
 
     public async Task SubmitMove(string gameId, List<TilePlacement> placements)
@@ -404,39 +355,5 @@ public class GameHub(IConnectionMultiplexer redis, ILogger<GameHub> logger, IGam
             logger.LogWarning(ex, "Invalid tile swap attempted by {PlayerId}", player.Id);
             await Clients.Caller.SendAsync(GameEvents.ReceiveError, ex.Message);
         }
-    }
-    
-    private static GameStateDto CreateGameStateDto(Game game, string targetPlayerId)
-    {
-        var requestingPlayer = game.Players.FirstOrDefault(p => p.Id == targetPlayerId);
-        var opponentPlayer = game.Players.FirstOrDefault(p => p.Id != targetPlayerId);
-
-        if (requestingPlayer == null) throw new Exception("Player not found in game.");
-
-        var boardDto = Enumerable.Range(0, Board.Size)
-            .Select(row => Enumerable.Range(0, Board.Size)
-                .Select(col =>
-                {
-                    var sq = game.Board.Squares[row][col];
-                    return new SquareDto(sq.Multiplier.ToString(), sq.Tile);
-                })
-                .ToArray())
-            .ToArray();
-
-        return new GameStateDto(
-            game.Id,
-            game.Status.ToString(),
-            game.CurrentPlayerId,
-            boardDto,
-            requestingPlayer.Id,
-            requestingPlayer.Rack,
-            requestingPlayer.Score,
-            opponentPlayer?.Id,
-            opponentPlayer?.Name,
-            opponentPlayer?.Score ?? 0,
-            opponentPlayer?.Rack.Count ?? 0,
-            opponentPlayer?.IsOnline ?? false,
-            game.TileBag.Count
-        );
     }
 }

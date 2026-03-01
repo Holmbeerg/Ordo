@@ -21,6 +21,7 @@ builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
 builder.Services.AddSingleton<IConnectionMultiplexer>(ConnectionMultiplexer.Connect("localhost:6379")); // redis
 builder.Services.AddSingleton<IWordDictionaryService, WordDictionaryService>();
 builder.Services.AddSingleton<IGameLogicService, GameLogicService>();
+builder.Services.AddSingleton<IMatchmakingService, MatchmakingService>();
 
 builder.Services.AddCors(options =>
 {
