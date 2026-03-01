@@ -123,9 +123,9 @@ public class GameLogicServiceTests
         game.Players.Add(player);
         game.DrawTiles(player, 7);
         
-        game.Board.Squares[7, 8].Tile = game.TileBag[1];
+        game.Board.Squares[7][8].Tile = game.TileBag[1];
         // Ensure center is technically covered so we pass the first turn rule
-        game.Board.Squares[7, 7].Tile = game.TileBag[2]; 
+        game.Board.Squares[7][7].Tile = game.TileBag[2]; 
 
         // Player places tiles on either side of the existing 7,8 tile
         var placements = new List<TilePlacement>
@@ -146,7 +146,7 @@ public class GameLogicServiceTests
         var player = new GuestPlayer("Olof");
         var tile = game.TileBag[0];
         
-        game.Board.Squares[7, 7].Tile = game.TileBag[1];
+        game.Board.Squares[7][7].Tile = game.TileBag[1];
 
         var placements = new List<TilePlacement>
         {
@@ -167,7 +167,7 @@ public class GameLogicServiceTests
         game.Players.Add(player);
         game.DrawTiles(player, 7);
         
-        game.Board.Squares[7, 7].Tile = game.TileBag[1];
+        game.Board.Squares[7][7].Tile = game.TileBag[1];
 
         var placements = new List<TilePlacement>
         {
@@ -205,7 +205,7 @@ public class GameLogicServiceTests
         var tile1 = game.TileBag[0];
         var tile2 = game.TileBag[1];
 
-        game.Board.Squares[7, 7].Tile = tile1;
+        game.Board.Squares[7][7].Tile = tile1;
 
         var placements = new List<TilePlacement>
         {
@@ -227,8 +227,8 @@ public class GameLogicServiceTests
         var player = new GuestPlayer("Olof");
         game.Players.Add(player);
 
-        game.Board.Squares[7, 7].Tile = new Tile { Letter = 'E', Value = 1 };
-        game.Board.Squares[6, 6].Tile = new Tile { Letter = 'O', Value = 2 };
+        game.Board.Squares[7][7].Tile = new Tile { Letter = 'E', Value = 1 };
+        game.Board.Squares[6][6].Tile = new Tile { Letter = 'O', Value = 2 };
 
         var tileH = new Tile { Letter = 'H', Value = 4 };
         var tileJ = new Tile { Letter = 'J', Value = 7 };
@@ -275,7 +275,7 @@ public class GameLogicServiceTests
         var gameLogic = new GameLogicService(new SpyDictionaryService());
         var game = new Game(); 
 
-        game.Board.Squares[14, 0].Tile = new Tile { Letter = 'A', Value = 1 };
+        game.Board.Squares[14][0].Tile = new Tile { Letter = 'A', Value = 1 };
 
         var placements = new List<TilePlacement>
         {
@@ -334,8 +334,8 @@ public class GameLogicServiceTests
         gameLogic.ExecuteMove(game, player1, placements);
 
         Assert.Equal(4, player1.Score); 
-        Assert.NotNull(game.Board.Squares[0, 4].Tile); 
-        Assert.Equal('A', game.Board.Squares[0, 4].Tile!.Letter);
+        Assert.NotNull(game.Board.Squares[0][4].Tile); 
+        Assert.Equal('A', game.Board.Squares[0][4].Tile!.Letter);
 
         Assert.Equal(7, player1.Rack.Count); 
         Assert.DoesNotContain(tileA, player1.Rack); 

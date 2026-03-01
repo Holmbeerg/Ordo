@@ -16,7 +16,7 @@ public class GameLogicService(IWordDictionaryService dictionaryService) : IGameL
         foreach (var p in placements)
         {
             if (p.Row < 0 || p.Row > 14 || p.Col < 0 || p.Col > 14) return false; // Out of bounds
-            if (!game.Board.Squares[p.Row, p.Col].IsEmpty) return false; // Square already occupied
+            if (!game.Board.Squares[p.Row][p.Col].IsEmpty) return false; // Square already occupied
         }
 
         var isHorizontal = placements.All(p => p.Row == placements[0].Row);
@@ -24,7 +24,7 @@ public class GameLogicService(IWordDictionaryService dictionaryService) : IGameL
 
         if (!isHorizontal && !isVertical && placements.Count > 1) return false;
 
-        var isFirstTurn = game.Board.Squares[7, 7].IsEmpty;
+        var isFirstTurn = game.Board.Squares[7][7].IsEmpty;
 
         if (isFirstTurn)
         {
@@ -55,10 +55,10 @@ public class GameLogicService(IWordDictionaryService dictionaryService) : IGameL
         foreach (var p in placements)
         {
             // Check Up, Down, Left, and Right for adjacent tiles
-            if ((p.Row > 0 && !game.Board.Squares[p.Row - 1, p.Col].IsEmpty) ||
-                (p.Row < 14 && !game.Board.Squares[p.Row + 1, p.Col].IsEmpty) ||
-                (p.Col > 0 && !game.Board.Squares[p.Row, p.Col - 1].IsEmpty) ||
-                (p.Col < 14 && !game.Board.Squares[p.Row, p.Col + 1].IsEmpty))
+            if ((p.Row > 0 && !game.Board.Squares[p.Row - 1][p.Col].IsEmpty) ||
+                (p.Row < 14 && !game.Board.Squares[p.Row + 1][p.Col].IsEmpty) ||
+                (p.Col > 0 && !game.Board.Squares[p.Row][p.Col - 1].IsEmpty) ||
+                (p.Col < 14 && !game.Board.Squares[p.Row][p.Col + 1].IsEmpty))
             {
                 return true; // we only need one adjacent tile to be valid, so we can return true immediately
             }
@@ -78,7 +78,7 @@ public class GameLogicService(IWordDictionaryService dictionaryService) : IGameL
             for (var c = minCol; c <= maxCol; c++)
             {
                 var hasTileBeingPlaced = placements.Any(p => p.Col == c);
-                var hasExistingTile = !game.Board.Squares[row, c].IsEmpty;
+                var hasExistingTile = !game.Board.Squares[row][c].IsEmpty;
 
                 if (!hasTileBeingPlaced && !hasExistingTile) return false; // Found a gap
             }
@@ -92,7 +92,7 @@ public class GameLogicService(IWordDictionaryService dictionaryService) : IGameL
             for (var r = minRow; r <= maxRow; r++)
             {
                 var hasTileBeingPlaced = placements.Any(p => p.Row == r);
-                var hasExistingTile = !game.Board.Squares[r, col].IsEmpty;
+                var hasExistingTile = !game.Board.Squares[r][col].IsEmpty;
 
                 if (!hasTileBeingPlaced && !hasExistingTile) return false; // Found a gap
             }
@@ -196,7 +196,7 @@ public class GameLogicService(IWordDictionaryService dictionaryService) : IGameL
         var placement = placements.FirstOrDefault(p => p.Row == row && p.Col == col);
 
         // Otherwise, check what is actually sitting on the board
-        return placement != null ? placement.Tile : game.Board.Squares[row, col].Tile;
+        return placement != null ? placement.Tile : game.Board.Squares[row][col].Tile;
     }
     
     public void SwapTiles(Game game, GuestPlayer player, List<Tile> tilesToSwap)
@@ -244,7 +244,7 @@ public class GameLogicService(IWordDictionaryService dictionaryService) : IGameL
 
                 if (isNewPlacement)
                 {
-                    var square = game.Board.Squares[wp.Row, wp.Col];
+                    var square = game.Board.Squares[wp.Row][wp.Col];
 
                     switch (square.Multiplier)
                     {
@@ -284,7 +284,7 @@ public class GameLogicService(IWordDictionaryService dictionaryService) : IGameL
 
         foreach (var placement in placements)
         {
-            game.Board.Squares[placement.Row, placement.Col].Tile = placement.Tile;
+            game.Board.Squares[placement.Row][placement.Col].Tile = placement.Tile;
 
             var rackTile = player.Rack.FirstOrDefault(t =>
                 t.Letter == placement.Tile.Letter && t.IsBlank == placement.Tile.IsBlank);
