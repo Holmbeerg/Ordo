@@ -7,10 +7,10 @@ public class Game
     public string Id { get; set; } = Guid.NewGuid().ToString();
     public string Language { get; set; } = "swedish"; 
     public GameStatus Status { get; set; } = GameStatus.WaitingForPlayers;
-    public Board Board { get; } = new();
-    public List<Tile> TileBag { get; private set; } = TileValues.GetSwedishTileBag();
-    public List<GuestPlayer> Players { get; } = [];
-    private int CurrentTurnIndex { get; set; }
+    public Board Board { get; set; } = new();
+    public List<Tile> TileBag { get; set; } = TileValues.GetSwedishTileBag();
+    public List<GuestPlayer> Players { get; set; } = [];
+    public int CurrentTurnIndex { get; set; } // this needs to be public for JSON serialization
     public string? CurrentPlayerId => Players.Count > 0 ? Players[CurrentTurnIndex].Id : null;
 
     public void StartGame()

@@ -9,7 +9,7 @@ public class GuestPlayer(string? name = null)
 
     public string ConnectionId { get; set; } = string.Empty;
     public bool IsOnline { get; set; } = true;
-    public string? CurrentGameId { get; init; }
+    public string? CurrentGameId { get; set; }
     public DateTime LastConnected { get; set; } = DateTime.UtcNow;
     
     public string RedisKey => $"guest_player:{Id}"; 
