@@ -12,8 +12,8 @@ public class BoardTests
         var board = new Board();
 
         // Assert
-        Assert.Equal(15, board.Squares.GetLength(0)); // Checks Row count
-        Assert.Equal(15, board.Squares.GetLength(1)); // Checks Column count
+        Assert.Equal(15, board.Squares.Length); // Checks Row count
+        Assert.Equal(15, board.Squares[0].Length); // Checks Column count
     }
 
     [Fact]
