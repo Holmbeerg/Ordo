@@ -12,8 +12,8 @@ public class BoardTests
         var board = new Board();
 
         // Assert
-        Assert.Equal(15, board.Squares.GetLength(0)); // Checks Row count
-        Assert.Equal(15, board.Squares.GetLength(1)); // Checks Column count
+        Assert.Equal(15, board.Squares.Length); // Checks Row count
+        Assert.Equal(15, board.Squares[0].Length); // Checks Column count
     }
 
     [Fact]
@@ -24,7 +24,7 @@ public class BoardTests
 
         // Assert
         // [7, 7] is the center of a 0-indexed 15x15 board
-        Assert.Equal(MultiplierType.DoubleWord, board.Squares[7, 7].Multiplier);
+        Assert.Equal(MultiplierType.DoubleWord, board.Squares[7][7].Multiplier);
     }
 
     [Theory]
@@ -38,7 +38,7 @@ public class BoardTests
         var board = new Board();
 
         // Assert
-        Assert.Equal(expected, board.Squares[row, col].Multiplier);
+        Assert.Equal(expected, board.Squares[row][col].Multiplier);
     }
 
     [Fact]
@@ -49,6 +49,6 @@ public class BoardTests
 
         // Assert
         // [0, 1] is just a normal empty square next to the top-left corner
-        Assert.Equal(MultiplierType.None, board.Squares[0, 1].Multiplier);
+        Assert.Equal(MultiplierType.None, board.Squares[0][1].Multiplier);
     }
 }

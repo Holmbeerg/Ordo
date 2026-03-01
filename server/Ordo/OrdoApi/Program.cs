@@ -1,3 +1,4 @@
+using System.Text.Json.Serialization;
 using OrdoApi.Exceptions;
 using OrdoApi.Hubs;
 using OrdoApi.Interfaces;
@@ -9,15 +10,17 @@ var builder = WebApplication.CreateBuilder(args);
 // Add services to the container.
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
 builder.Services.AddOpenApi();
-builder.Services.AddSignalR();
+builder.Services.AddSignalR()
+    .AddJsonProtocol(options =>
+    {
+        options.PayloadSerializerOptions.Converters.Add(new JsonStringEnumConverter()); // for TimeControl and GameStatus enums
+    });
 builder.Services.AddControllers();
 builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
 
 builder.Services.AddSingleton<IConnectionMultiplexer>(ConnectionMultiplexer.Connect("localhost:6379")); // redis
-builder.Services.AddSingleton<WordDictionaryService>();
+builder.Services.AddSingleton<IWordDictionaryService, WordDictionaryService>();
 builder.Services.AddSingleton<IGameLogicService, GameLogicService>();
-// builder.Services.AddScoped<IMatchmakingService, MatchmakingService>();
-
 
 builder.Services.AddCors(options =>
 {
@@ -45,7 +48,7 @@ app.MapControllers();
 app.MapHub<GameHub>("/gameHub");
 
 // probably not the best option
-var wordDictionaryService = app.Services.GetRequiredService<WordDictionaryService>();
+var wordDictionaryService = app.Services.GetRequiredService<IWordDictionaryService>();
 await wordDictionaryService.InitializeAsync();
 
 app.Logger.LogInformation("Starting Ordo backend...");

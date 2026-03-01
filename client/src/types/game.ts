@@ -14,9 +14,7 @@ export interface Square {
     tile: Tile | null;
 }
 
-export interface Board {
-    squares: Square[][];
-}
+export type Board = Square[][];
 
 export interface TilePlacement {
     row: number;
@@ -38,6 +36,7 @@ export interface GameStateDto {
     opponentName: string | null;
     opponentScore: number;
     opponentRackCount: number;
+    opponentIsConnected: boolean;
 
     tilesRemainingInBag: number;
 }

@@ -1,1 +1,1 @@
-export type TimeControl = 'bullet' | 'blitz' | 'rapid' | 'classical';
+export type TimeControl = 'Bullet' | 'Blitz' | 'Rapid' | 'Classical';

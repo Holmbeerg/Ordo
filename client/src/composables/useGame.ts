@@ -1,7 +1,13 @@
 import { computed } from 'vue';
 import { storeToRefs } from 'pinia';
 import { useGameStore } from '@/stores/gameStore.ts';
-import { connectionState, submitWord as hubSubmitWord, passTurn as hubPassTurn, exchangeTiles as hubExchangeTiles } from '@/services/signalr.ts';
+import {
+    connectionState,
+    submitWord as hubSubmitWord,
+    passTurn as hubPassTurn,
+    exchangeTiles as hubExchangeTiles,
+    resignGame as hubResignGame,
+} from '@/services/signalr.ts';
 import type { Tile } from '@/types/game.ts';
 
 export function useGame() {
@@ -20,6 +26,7 @@ export function useGame() {
         opponentRackCount,
         tilesRemaining,
         hasPendingPlacements,
+        opponentIsConnected,
     } = storeToRefs(gameStore);
 
     const isConnecting = computed(() => connectionState.value === 'connecting');
@@ -55,6 +62,14 @@ export function useGame() {
         }
     }
 
+    async function resignGame() {
+        if (!gameState.value) return;
+        await hubResignGame(gameState.value.gameId);
+        gameStore.reset();
+    }
+
+    const opponentName = computed(() => gameState.value?.opponentName ?? null);
+
     return {
         // Connection state
         isConnecting,
@@ -69,6 +84,8 @@ export function useGame() {
         myRack,
         myScore,
         opponentScore,
+        opponentName,
+        opponentIsConnected,
         opponentRackCount,
         tilesRemaining,
         hasPendingPlacements,
@@ -79,5 +96,6 @@ export function useGame() {
         submitWord,
         passTurn,
         exchangeTiles,
+        resignGame,
     };
 }

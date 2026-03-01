@@ -2,13 +2,13 @@ namespace OrdoApi.Models;
 
 public class Board
 {
-    // A 2D array representing the 15x15 grid
-    public Square[,] Squares { get; } // [,] syntax for 2D array
+    // A jagged array representing the 15x15 grid (Square[][] is JSON-serializable, Square[,] is not)
+    public Square[][] Squares { get; set; }
     public const int Size = 15;
 
     public Board()
     {
-        Squares = new Square[Size, Size];
+        Squares = new Square[Size][];
         InitializeEmptyBoard();
         ApplyMultipliers();
     }
@@ -17,9 +17,10 @@ public class Board
     {
         for (var row = 0; row < Size; row++)
         {
+            Squares[row] = new Square[Size];
             for (var col = 0; col < Size; col++)
             {
-                Squares[row, col] = new Square();
+                Squares[row][col] = new Square();
             }
         }
     }
@@ -63,7 +64,7 @@ public class Board
     {
         foreach (var (row, col) in coordinates)
         {
-            Squares[row, col].Multiplier = type;
+            Squares[row][col].Multiplier = type;
         }
     }
 }

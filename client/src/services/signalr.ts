@@ -1,8 +1,8 @@
 import * as signalR from '@microsoft/signalr';
 import { ref } from 'vue';
-import type { TimeControl } from "@/types/TimeControl.ts";
-import type { Tile, TilePlacement } from "@/types/game.ts";
-import { useGameStore } from "@/stores/gameStore.ts";
+import type { TimeControl } from '@/types/TimeControl.ts';
+import type { Tile, TilePlacement } from '@/types/game.ts';
+import { useGameStore } from '@/stores/gameStore.ts';
 
 export const connectionState = ref<'disconnected' | 'connecting' | 'connected'>('disconnected');
 export const playerId = ref<string>(localStorage.getItem('playerId') || '');
@@ -16,10 +16,7 @@ export const createConnection = (): signalR.HubConnection => {
 
     const url = `http://localhost:5172/gameHub?playerId=${playerId.value}`;
 
-    connection = new signalR.HubConnectionBuilder()
-        .withUrl(url)
-        .withAutomaticReconnect()
-        .build(); // doesn't start the connection yet
+    connection = new signalR.HubConnectionBuilder().withUrl(url).withAutomaticReconnect().build(); // doesn't start the connection yet
 
     connection.onclose(() => {
         connectionState.value = 'disconnected';
@@ -50,10 +47,19 @@ export const createConnection = (): signalR.HubConnection => {
         console.log('Joined matchmaking for:', timeControl);
     });
 
-
     connection.on('ReceiveGameState', (gameStateDto) => {
         console.log('Received updated game state:', gameStateDto);
         useGameStore().setGameState(gameStateDto);
+    });
+
+    connection.on('OpponentDisconnected', () => {
+        console.log('Opponent disconnected');
+        useGameStore().setOpponentConnected(false);
+    });
+
+    connection.on('OpponentReconnected', () => {
+        console.log('Opponent reconnected');
+        useGameStore().setOpponentConnected(true);
     });
 
     connection.on('ReceiveError', (errorMessage: string) => {
@@ -120,5 +126,11 @@ export const passTurn = async (gameId: string): Promise<void> => {
 export const exchangeTiles = async (gameId: string, tiles: Tile[]): Promise<void> => {
     if (connection) {
         await connection.invoke('ExchangeTiles', gameId, tiles);
+    }
+};
+
+export const resignGame = async (gameId: string): Promise<void> => {
+    if (connection) {
+        await connection.invoke('ResignGame', gameId);
     }
 };
