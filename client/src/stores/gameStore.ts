@@ -6,6 +6,7 @@ export const useGameStore = defineStore('game', () => {
     const gameState = ref<GameStateDto | null>(null);
     const pendingPlacements = ref<TilePlacement[]>([]);
     const error = ref<string | null>(null);
+    const opponentIsConnected = ref<boolean>(false);
 
     const isMyTurn = computed(
         () => gameState.value?.currentTurnPlayerId === gameState.value?.myPlayerId
@@ -21,7 +22,12 @@ export const useGameStore = defineStore('game', () => {
 
     function setGameState(dto: GameStateDto) {
         gameState.value = dto;
+        opponentIsConnected.value = dto.opponentIsConnected;
         pendingPlacements.value = []; // clear pending on every server update
+    }
+
+    function setOpponentConnected(connected: boolean) {
+        opponentIsConnected.value = connected;
     }
 
     function placeTile(placement: TilePlacement) {
@@ -31,7 +37,7 @@ export const useGameStore = defineStore('game', () => {
         gameState.value.myRack = gameState.value.myRack.filter((t) => t.id !== placement.tile.id);
 
         // Write tile onto the board so board and rack stay in sync
-        gameState.value.board.squares[placement.row][placement.col].tile = placement.tile;
+        gameState.value.board[placement.row][placement.col].tile = placement.tile;
 
         pendingPlacements.value.push(placement);
     }
@@ -41,7 +47,7 @@ export const useGameStore = defineStore('game', () => {
 
         // Remove tiles from the board for each pending placement
         for (const p of pendingPlacements.value) {
-            gameState.value.board.squares[p.row][p.col].tile = null;
+            gameState.value.board[p.row][p.col].tile = null;
         }
 
         // Return tiles to rack
@@ -53,11 +59,19 @@ export const useGameStore = defineStore('game', () => {
         error.value = null;
     }
 
+    function reset() {
+        gameState.value = null;
+        pendingPlacements.value = [];
+        error.value = null;
+        opponentIsConnected.value = false;
+    }
+
     return {
         // State
         gameState,
         pendingPlacements,
         error,
+        opponentIsConnected,
         // Getters
         isMyTurn,
         isGameOver,
@@ -70,8 +84,10 @@ export const useGameStore = defineStore('game', () => {
         hasPendingPlacements,
         // Actions
         setGameState,
+        setOpponentConnected,
         placeTile,
         recallTiles,
         clearError,
+        reset,
     };
 });

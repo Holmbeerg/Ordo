@@ -21,13 +21,16 @@ onUnmounted(async () => {
 })
 
 const showFooter = computed(() => !route.meta.hideFooter)
+const showHeader = computed(() => !route.meta.hideHeader)
 
 </script>
 
 <template>
-  <div class="bg-[#302E2B] min-h-screen">
-    <AppHeader />
+  <div class="bg-[#302E2B] h-screen flex flex-col overflow-hidden">
+    <AppHeader v-if="showHeader" class="flex-shrink-0" />
+    <div class="flex-1 min-h-0 flex flex-col overflow-hidden">
       <RouterView/>
-    <AppFooter v-if="showFooter"/>
+    </div>
+    <AppFooter v-if="showFooter" class="flex-shrink-0"/>
   </div>
 </template>
