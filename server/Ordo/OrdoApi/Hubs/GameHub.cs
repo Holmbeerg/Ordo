@@ -1,5 +1,6 @@
 using System.Text.Json;
 using Microsoft.AspNetCore.SignalR;
+using OrdoApi.Interfaces;
 using OrdoApi.Models;
 using OrdoApi.Services;
 using StackExchange.Redis;
@@ -14,11 +15,13 @@ public static class GameEvents
     public const string PlayerConnected = "PlayerConnected";
     public const string ReceiveError = "ReceiveError";
     public const string GameOver = "GameOver";
+    public const string OpponentDisconnected = "OpponentDisconnected";
+    public const string OpponentReconnected = "OpponentReconnected";
 }
 
 // https://learn.microsoft.com/en-us/aspnet/core/signalr/hubs?view=aspnetcore-9.0
 // TODO: look into refactor using groups
-public class GameHub(IConnectionMultiplexer redis, ILogger<GameHub> logger, GameLogicService gameLogic) : Hub
+public class GameHub(IConnectionMultiplexer redis, ILogger<GameHub> logger, IGameLogicService gameLogic) : Hub
 {
     private readonly IDatabase _db = redis.GetDatabase();
 
@@ -36,12 +39,12 @@ public class GameHub(IConnectionMultiplexer redis, ILogger<GameHub> logger, Game
         if (!string.IsNullOrEmpty(playerId))
         {
             logger.LogInformation("Player with ID {PlayerId} is attempting to reconnect.", playerId);
-            await ReconnectPlayerAsync(playerId);
+            await ReconnectPlayer(playerId);
         }
         else
         {
             logger.LogInformation("No PlayerId found in query. Creating new guest player.");
-            await CreateNewGuestPlayerAsync();
+            await CreateNewGuestPlayer();
         }
 
         await base.OnConnectedAsync();
@@ -50,7 +53,6 @@ public class GameHub(IConnectionMultiplexer redis, ILogger<GameHub> logger, Game
     // TODO: timer for player to reconnect etc
     public override async Task OnDisconnectedAsync(Exception? exception)
     {
-        // we find the player by connectionId to mark them offline
         var playerId = await _db.StringGetAsync($"connection:{Context.ConnectionId}");
 
         if (!playerId.IsNullOrEmpty)
@@ -65,33 +67,26 @@ public class GameHub(IConnectionMultiplexer redis, ILogger<GameHub> logger, Game
                 {
                     player.IsOnline = false;
                     player.LastConnected = DateTime.UtcNow;
-
                     await _db.StringSetAsync(playerKey, JsonSerializer.Serialize(player));
                     logger.LogInformation("Player {PlayerId} disconnected. Status set to offline.", player.Id);
 
-                    // TODO: if in a game, notify other player etc
+                    // Notify the opponent in any active game
+                    await NotifyOpponentConnectionChange(player, connected: false);
                 }
             }
 
-            // clean up the connection mapping
             await _db.KeyDeleteAsync($"connection:{Context.ConnectionId}");
         }
 
         if (exception != null)
-        {
-            logger.LogError(exception, "A client disconnected with an error. ConnectionId: {ConnectionId}",
-                Context.ConnectionId);
-        }
+            logger.LogError(exception, "A client disconnected with an error. ConnectionId: {ConnectionId}", Context.ConnectionId);
         else
-        {
-            logger.LogInformation("A client disconnected gracefully. ConnectionId: {ConnectionId}",
-                Context.ConnectionId);
-        }
+            logger.LogInformation("A client disconnected gracefully. ConnectionId: {ConnectionId}", Context.ConnectionId);
 
         await base.OnDisconnectedAsync(exception);
     }
 
-    private async Task ReconnectPlayerAsync(string playerId)
+    private async Task ReconnectPlayer(string playerId)
     {
         var playerKey = $"guest_player:{playerId}";
         var playerJson = await _db.StringGetAsync(playerKey);
@@ -101,7 +96,7 @@ public class GameHub(IConnectionMultiplexer redis, ILogger<GameHub> logger, Game
             logger.LogWarning(
                 "Reconnect failed: Player data not found in Redis for PlayerId: {PlayerId}. Creating new player",
                 playerId);
-            await CreateNewGuestPlayerAsync();
+            await CreateNewGuestPlayer();
             return;
         }
 
@@ -111,7 +106,7 @@ public class GameHub(IConnectionMultiplexer redis, ILogger<GameHub> logger, Game
             logger.LogWarning(
                 "Reconnect failed: Could not deserialize player data for PlayerId: {PlayerId}. Creating new player",
                 playerId);
-            await CreateNewGuestPlayerAsync();
+            await CreateNewGuestPlayer();
             return;
         }
 
@@ -129,10 +124,13 @@ public class GameHub(IConnectionMultiplexer redis, ILogger<GameHub> logger, Game
             player.Id, Context.ConnectionId);
         await Clients.Caller.SendAsync(GameEvents.PlayerConnected, player.Id);
 
+        // Notify opponent that this player is back online
+        await NotifyOpponentConnectionChange(player, connected: true);
+
         // TODO: add back to group if in a game etc
     }
 
-    private async Task CreateNewGuestPlayerAsync()
+    private async Task CreateNewGuestPlayer()
     {
         var randomNum = new Random().Next(1000, 9999);
         var guestName = $"Guest#{randomNum}";
@@ -153,7 +151,26 @@ public class GameHub(IConnectionMultiplexer redis, ILogger<GameHub> logger, Game
         await Clients.Caller.SendAsync(GameEvents.PlayerConnected, player.Id);
     }
 
-    private async Task<(Game game, string playerIdStr)?> GetValidatedGameContextAsync(string gameId)
+    private async Task NotifyOpponentConnectionChange(GuestPlayer player, bool connected)
+    {
+        if (player.CurrentGameId == null) return;
+
+        var gameJson = await _db.StringGetAsync($"game:{player.CurrentGameId}");
+        if (gameJson.IsNullOrEmpty) return;
+
+        var game = JsonSerializer.Deserialize<Game>(gameJson!);
+        if (game == null) return;
+
+        var opponent = game.Players.FirstOrDefault(p => p.Id != player.Id);
+        if (opponent == null || string.IsNullOrEmpty(opponent.ConnectionId)) return;
+
+        var eventName = connected ? GameEvents.OpponentReconnected : GameEvents.OpponentDisconnected;
+        await Clients.Client(opponent.ConnectionId).SendAsync(eventName);
+
+        logger.LogInformation("Sent {Event} to opponent {OpponentId} in game {GameId}", eventName, opponent.Id, player.CurrentGameId);
+    }
+
+    private async Task<(Game game, string playerIdStr)?> GetValidatedGameContext(string gameId)
     {
         var playerIdStr = await _db.StringGetAsync($"connection:{Context.ConnectionId}");
         if (playerIdStr.IsNullOrEmpty) return null;
@@ -167,7 +184,7 @@ public class GameHub(IConnectionMultiplexer redis, ILogger<GameHub> logger, Game
         return (game, playerIdStr.ToString());
     }
 
-    private async Task<bool> ValidatePlayerTurnAsync(Game game, string playerIdStr)
+    private async Task<bool> ValidatePlayerTurn(Game game, string playerIdStr)
     {
         if (game.Status != GameStatus.InProgress)
         {
@@ -181,7 +198,7 @@ public class GameHub(IConnectionMultiplexer redis, ILogger<GameHub> logger, Game
         return false;
     }
     
-    private async Task SaveAndBroadcastGameStateAsync(Game game)
+    private async Task SaveAndBroadcastGameState(Game game)
     {
         await _db.StringSetAsync($"game:{game.Id}", JsonSerializer.Serialize(game));
 
@@ -193,7 +210,7 @@ public class GameHub(IConnectionMultiplexer redis, ILogger<GameHub> logger, Game
         }
     }
 
-    public async Task JoinMatchmakingAsync(TimeControl timeControl, string playerId)
+    public async Task JoinMatchmaking(TimeControl timeControl, string playerId)
     {
         var queueKey =
             $"matchmaking:{timeControl.ToString().ToLower()}"; // adjust to language specific when we add that feature
@@ -234,19 +251,40 @@ public class GameHub(IConnectionMultiplexer redis, ILogger<GameHub> logger, Game
 
             newGame.StartGame();
 
+            // Store current game on each player so we can look it up from connection events
+            opponent!.CurrentGameId = newGame.Id;
+            player!.CurrentGameId = newGame.Id;
+            await _db.StringSetAsync($"guest_player:{opponent.Id}", JsonSerializer.Serialize(opponent));
+            await _db.StringSetAsync($"guest_player:{player.Id}", JsonSerializer.Serialize(player));
+
             await _db.StringSetAsync($"game:{newGame.Id}", JsonSerializer.Serialize(newGame));
 
-            await Clients.Caller.SendAsync(GameEvents.MatchFound, newGame.Id);
+            var playerDto = CreateGameStateDto(newGame, player.Id);
+            var opponentDto = CreateGameStateDto(newGame, opponent.Id);
 
-            var opponentConnectionId = opponent!.ConnectionId;
+            await Clients.Caller.SendAsync(GameEvents.MatchFound, playerDto);
+
+            var opponentConnectionId = opponent.ConnectionId;
             if (!string.IsNullOrEmpty(opponentConnectionId))
             {
-                await Clients.Client(opponentConnectionId).SendAsync(GameEvents.MatchFound, newGame.Id);
+                await Clients.Client(opponentConnectionId).SendAsync(GameEvents.MatchFound, opponentDto);
             }
         }
     }
 
-    public async Task<GameStateDto?> GetGameStateAsync(string gameId)
+    public async Task LeaveMatchmaking(TimeControl timeControl, string playerId)
+    {
+        var queueKey = $"matchmaking:{timeControl.ToString().ToLower()}";
+
+        var removed = await _db.ListRemoveAsync(queueKey, playerId);
+
+        if (removed > 0)
+            logger.LogInformation("Player {PlayerId} left the {TimeControl} matchmaking queue.", playerId, timeControl);
+        else
+            logger.LogWarning("Player {PlayerId} tried to leave {TimeControl} queue but was not found.", playerId, timeControl);
+    }
+
+    public async Task<GameStateDto?> GetGameState(string gameId)
     {
         var playerId = await _db.StringGetAsync($"connection:{Context.ConnectionId}");
         if (playerId.IsNullOrEmpty) return null;
@@ -260,20 +298,24 @@ public class GameHub(IConnectionMultiplexer redis, ILogger<GameHub> logger, Game
 
     public async Task SubmitMove(string gameId, List<TilePlacement> placements)
     {
-        var context = await GetValidatedGameContextAsync(gameId);
+        var context = await GetValidatedGameContext(gameId);
         if (context == null) return;
 
         var (game, playerIdStr) = context.Value;
-        if (!await ValidatePlayerTurnAsync(game, playerIdStr)) return;
+        if (!await ValidatePlayerTurn(game, playerIdStr)) return;
 
         var player = game.Players.First(p => p.Id == playerIdStr);
 
         try
         {
-            gameLogic.ValidateMove(game, player, placements);
+            if (!gameLogic.ValidateMove(game, player, placements))
+            {
+                throw new InvalidOperationException("Invalid move.");
+            }
+
             gameLogic.ExecuteMove(game, player, placements);
 
-            await SaveAndBroadcastGameStateAsync(game);
+            await SaveAndBroadcastGameState(game);
 
             if (game.Status == GameStatus.Completed)
             {
@@ -294,28 +336,57 @@ public class GameHub(IConnectionMultiplexer redis, ILogger<GameHub> logger, Game
         }
     }
 
-    public async Task PassTurn(string gameId)
+    public async Task ResignGame(string gameId)
     {
-        var context = await GetValidatedGameContextAsync(gameId);
+        var context = await GetValidatedGameContext(gameId);
         if (context == null) return;
 
         var (game, playerIdStr) = context.Value;
-        if (!await ValidatePlayerTurnAsync(game, playerIdStr)) return;
+
+        if (game.Status != GameStatus.InProgress)
+        {
+            await Clients.Caller.SendAsync(GameEvents.ReceiveError, "The game is not currently active.");
+            return;
+        }
+
+        game.Status = GameStatus.Completed;
+
+        await _db.StringSetAsync($"game:{game.Id}", JsonSerializer.Serialize(game));
+
+        var opponent = game.Players.FirstOrDefault(p => p.Id != playerIdStr);
+
+        logger.LogInformation("Player {PlayerId} resigned from game {GameId}", playerIdStr, gameId);
+
+        await Clients.Caller.SendAsync(GameEvents.GameOver, opponent?.Id);
+
+        if (opponent != null && !string.IsNullOrEmpty(opponent.ConnectionId))
+        {
+            await Clients.Client(opponent.ConnectionId).SendAsync(GameEvents.GameOver, opponent.Id);
+        }
+    }
+
+    public async Task PassTurn(string gameId)
+    {
+        var context = await GetValidatedGameContext(gameId);
+        if (context == null) return;
+
+        var (game, playerIdStr) = context.Value;
+        if (!await ValidatePlayerTurn(game, playerIdStr)) return;
 
         game.AdvanceTurn();
 
-        await SaveAndBroadcastGameStateAsync(game);
+        await SaveAndBroadcastGameState(game);
 
         logger.LogInformation("Player {PlayerId} passed their turn in game {GameId}", playerIdStr, gameId);
     }
 
-    public async Task SwapTiles(string gameId, List<Tile> tilesToSwap)
+    public async Task ExchangeTiles(string gameId, List<Tile> tilesToSwap)
     {
-        var context = await GetValidatedGameContextAsync(gameId);
+        var context = await GetValidatedGameContext(gameId);
         if (context == null) return;
 
         var (game, playerIdStr) = context.Value;
-        if (!await ValidatePlayerTurnAsync(game, playerIdStr)) return;
+        if (!await ValidatePlayerTurn(game, playerIdStr)) return;
 
         var player = game.Players.First(p => p.Id == playerIdStr);
 
@@ -323,7 +394,7 @@ public class GameHub(IConnectionMultiplexer redis, ILogger<GameHub> logger, Game
         {
             gameLogic.SwapTiles(game, player, tilesToSwap);
 
-            await SaveAndBroadcastGameStateAsync(game);
+            await SaveAndBroadcastGameState(game);
 
             logger.LogInformation("Player {PlayerId} swapped {Count} tiles in game {GameId}", player.Id,
                 tilesToSwap.Count, gameId);
@@ -335,18 +406,28 @@ public class GameHub(IConnectionMultiplexer redis, ILogger<GameHub> logger, Game
         }
     }
     
-    private GameStateDto CreateGameStateDto(Game game, string targetPlayerId)
+    private static GameStateDto CreateGameStateDto(Game game, string targetPlayerId)
     {
         var requestingPlayer = game.Players.FirstOrDefault(p => p.Id == targetPlayerId);
         var opponentPlayer = game.Players.FirstOrDefault(p => p.Id != targetPlayerId);
 
         if (requestingPlayer == null) throw new Exception("Player not found in game.");
 
+        var boardDto = Enumerable.Range(0, Board.Size)
+            .Select(row => Enumerable.Range(0, Board.Size)
+                .Select(col =>
+                {
+                    var sq = game.Board.Squares[row][col];
+                    return new SquareDto(sq.Multiplier.ToString(), sq.Tile);
+                })
+                .ToArray())
+            .ToArray();
+
         return new GameStateDto(
             game.Id,
             game.Status.ToString(),
             game.CurrentPlayerId,
-            game.Board,
+            boardDto,
             requestingPlayer.Id,
             requestingPlayer.Rack,
             requestingPlayer.Score,
@@ -354,6 +435,7 @@ public class GameHub(IConnectionMultiplexer redis, ILogger<GameHub> logger, Game
             opponentPlayer?.Name,
             opponentPlayer?.Score ?? 0,
             opponentPlayer?.Rack.Count ?? 0,
+            opponentPlayer?.IsOnline ?? false,
             game.TileBag.Count
         );
     }
