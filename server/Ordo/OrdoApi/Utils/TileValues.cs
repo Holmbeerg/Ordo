@@ -4,6 +4,19 @@ namespace OrdoApi.Utils;
 
 public static class TileValues
 {
+    private static readonly Dictionary<char, int> SwedishLetterValues = new()
+    {
+        { 'A', 1 }, { 'B', 3 }, { 'C', 8 }, { 'D', 1 }, { 'E', 1 },
+        { 'F', 3 }, { 'G', 2 }, { 'H', 3 }, { 'I', 1 }, { 'J', 7 },
+        { 'K', 3 }, { 'L', 2 }, { 'M', 3 }, { 'N', 1 }, { 'O', 2 },
+        { 'P', 4 }, { 'R', 1 }, { 'S', 1 }, { 'T', 1 }, { 'U', 4 },
+        { 'V', 3 }, { 'X', 8 }, { 'Y', 7 }, { 'Z', 8 }, { 'Å', 4 },
+        { 'Ä', 4 }, { 'Ö', 4 }, { ' ', 0 }
+    };
+
+    public static int GetLetterValue(char letter) =>
+        SwedishLetterValues.GetValueOrDefault(char.ToUpper(letter), 0);
+
     public static List<Tile> GetSwedishTileBag()
     {
         var bag = new List<Tile>();

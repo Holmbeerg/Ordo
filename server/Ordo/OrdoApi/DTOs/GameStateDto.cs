@@ -1,6 +1,10 @@
-namespace OrdoApi.Models;
+namespace OrdoApi.DTOs;
 
-public record SquareDto(string Multiplier, Tile? Tile);
+public record TileDto(string Id, char Letter, int Value, bool IsBlank);
+
+public record TileDtoPlacement(int Row, int Col, char Letter, bool IsBlank);
+
+public record SquareDto(string Multiplier, TileDto? Tile);
 
 public record GameStateDto(
     string GameId,
@@ -9,7 +13,7 @@ public record GameStateDto(
     SquareDto[][] Board,
 
     string MyPlayerId,
-    List<Tile> MyRack,
+    List<TileDto> MyRack,
     int MyScore,
 
     string? OpponentId,

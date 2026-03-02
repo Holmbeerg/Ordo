@@ -1,5 +1,6 @@
 using OrdoApi.Interfaces;
 using OrdoApi.Models;
+using OrdoApi.Utils;
 
 namespace OrdoApi.Services;
 
@@ -104,10 +105,22 @@ public class GameLogicService(IWordDictionaryService dictionaryService) : IGameL
     private static bool IsPlayerStateValid(Game game, GuestPlayer player, List<TilePlacement> placements)
     {
         if (game.CurrentPlayerId != player.Id) return false;
+        
+        var availableRack = player.Rack.ToList();
 
-        var availableLetters = player.Rack.Select(t => t.Letter).ToList(); // Copy of player's rack letters
+        foreach (var placement in placements)
+        {
+            Tile? matchingTile;
+            // The client says this is a blank tile: find an actual blank in the rack
+            matchingTile = placement.Tile.IsBlank ? availableRack.FirstOrDefault(t => t.IsBlank) :
+                // Normal tile
+                availableRack.FirstOrDefault(t => t.Letter == placement.Tile.Letter && !t.IsBlank);
 
-        return placements.All(placement => availableLetters.Remove(placement.Tile.Letter));
+            if (matchingTile == null) return false;
+            availableRack.Remove(matchingTile);
+        }
+
+        return true;
     }
 
     private static FormedWord GetFullWord(Game game, List<TilePlacement> newPlacements, int row, int col,
@@ -192,11 +205,10 @@ public class GameLogicService(IWordDictionaryService dictionaryService) : IGameL
     {
         if (row < 0 || row >= Board.Size || col < 0 || col >= Board.Size) return null;
 
-        // First, check if the player is placing a tile exactly here right now
         var placement = placements.FirstOrDefault(p => p.Row == row && p.Col == col);
+        if (placement != null) return placement.Tile;
 
-        // Otherwise, check what is actually sitting on the board
-        return placement != null ? placement.Tile : game.Board.Squares[row][col].Tile;
+        return game.Board.Squares[row][col].Tile;
     }
     
     public void SwapTiles(Game game, GuestPlayer player, List<Tile> tilesToSwap)
@@ -237,7 +249,8 @@ public class GameLogicService(IWordDictionaryService dictionaryService) : IGameL
 
             foreach (var wp in word.Placements)
             {
-                var letterScore = wp.Tile.Value;
+                // Always use server-side value, never trust the client-supplied Value
+                var letterScore = wp.Tile.IsBlank ? 0 : TileValues.GetLetterValue(wp.Tile.Letter);
 
                 // multipliers only apply to the newly placed tiles, not existing tiles that are part of the word
                 var isNewPlacement = placements.Any(p => p.Row == wp.Row && p.Col == wp.Col);
@@ -286,8 +299,11 @@ public class GameLogicService(IWordDictionaryService dictionaryService) : IGameL
         {
             game.Board.Squares[placement.Row][placement.Col].Tile = placement.Tile;
 
-            var rackTile = player.Rack.FirstOrDefault(t =>
-                t.Letter == placement.Tile.Letter && t.IsBlank == placement.Tile.IsBlank);
+            // Match the rack tile by IsBlank for blanks, or by letter for normal tiles
+            var rackTile = placement.Tile.IsBlank
+                ? player.Rack.FirstOrDefault(t => t.IsBlank)
+                : player.Rack.FirstOrDefault(t => t.Letter == placement.Tile.Letter && !t.IsBlank);
+
             if (rackTile != null)
             {
                 player.Rack.Remove(rackTile);

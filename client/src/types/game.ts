@@ -19,7 +19,7 @@ export type Board = Square[][];
 export interface TilePlacement {
     row: number;
     col: number;
-    tile: Tile;
+    tile: Omit<Tile, 'value' | 'id'>; // Server will determine the value
 }
 
 export interface GameStateDto {

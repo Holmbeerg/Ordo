@@ -1,5 +1,6 @@
 using System.Text.Json;
 using Microsoft.AspNetCore.SignalR;
+using OrdoApi.DTOs;
 using OrdoApi.Extensions;
 using OrdoApi.Interfaces;
 using OrdoApi.Models;
@@ -247,7 +248,7 @@ public class GameHub(IConnectionMultiplexer redis, ILogger<GameHub> logger, IGam
         return game?.ToGameStateDto(playerId.ToString());
     }
 
-    public async Task SubmitMove(string gameId, List<TilePlacement> placements)
+    public async Task SubmitMove(string gameId, List<TileDtoPlacement> rawPlacements)
     {
         var context = await GetValidatedGameContext(gameId);
         if (context == null) return;
@@ -256,6 +257,7 @@ public class GameHub(IConnectionMultiplexer redis, ILogger<GameHub> logger, IGam
         if (!await ValidatePlayerTurn(game, playerIdStr)) return;
 
         var player = game.Players.First(p => p.Id == playerIdStr);
+        var placements = rawPlacements.Select(p => p.ToTilePlacement()).ToList();
 
         try
         {

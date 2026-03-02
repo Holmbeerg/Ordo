@@ -1,9 +1,21 @@
+using OrdoApi.DTOs;
 using OrdoApi.Models;
+using OrdoApi.Utils;
 
 namespace OrdoApi.Extensions;
 
 public static class GameMappingExtensions
 {
+    public static TilePlacement ToTilePlacement(this TileDtoPlacement p) => new(p.Row, p.Col, new Tile
+    {
+        Letter = p.Letter,
+        Value = p.IsBlank ? 0 : TileValues.GetLetterValue(p.Letter),
+        IsBlank = p.IsBlank
+    });
+
+    private static TileDto? ToDto(this Tile? tile) =>
+        tile == null ? null : new TileDto(Guid.NewGuid().ToString(), tile.Letter, tile.Value, tile.IsBlank);
+
     public static GameStateDto ToGameStateDto(this Game game, string targetPlayerId)
     {
         var requestingPlayer = game.Players.FirstOrDefault(p => p.Id == targetPlayerId);
@@ -16,7 +28,7 @@ public static class GameMappingExtensions
                 .Select(col =>
                 {
                     var sq = game.Board.Squares[row][col];
-                    return new SquareDto(sq.Multiplier.ToString(), sq.Tile);
+                    return new SquareDto(sq.Multiplier.ToString(), sq.Tile.ToDto());
                 })
                 .ToArray())
             .ToArray();
@@ -27,7 +39,7 @@ public static class GameMappingExtensions
             game.CurrentPlayerId,
             boardDto,
             requestingPlayer.Id,
-            requestingPlayer.Rack,
+            requestingPlayer.Rack.Select(t => t.ToDto()!).ToList(),
             requestingPlayer.Score,
             opponentPlayer?.Id,
             opponentPlayer?.Name,
