@@ -2,10 +2,34 @@
 import { inject, ref, onMounted, onUnmounted } from 'vue';
 import { useGame } from '@/composables/useGame.ts';
 import { SELECTED_TILE_KEY } from '@/composables/useSelectedTile.ts';
-import type { Square } from '@/types/game.ts';
+import BlankTilePicker from '@/components/game/BlankTilePicker.vue';
+import type { Square, TilePlacement } from '@/types/game.ts';
 
 const { board, isMyTurn, pendingPlacements, placeTile, gameState } = useGame();
 const selectedTile = inject(SELECTED_TILE_KEY)!;
+
+// Blank tile picker state
+const showBlankPicker = ref(false);
+const pendingBlankPlacement = ref<TilePlacement | null>(null);
+
+function onBlankLetterPicked(letter: string) {
+    if (!pendingBlankPlacement.value) return;
+    pendingBlankPlacement.value.tile.letter = letter;
+    placeTile(pendingBlankPlacement.value);
+    showBlankPicker.value = false;
+    pendingBlankPlacement.value = null;
+}
+
+function onBlankPickerCancel() {
+    if (pendingBlankPlacement.value) {
+        // Return the tile to the rack since it was already removed
+        if (gameState.value) {
+            gameState.value.myRack.push(pendingBlankPlacement.value.tile);
+        }
+    }
+    showBlankPicker.value = false;
+    pendingBlankPlacement.value = null;
+}
 
 const containerRef = ref<HTMLElement | null>(null);
 const boardPx = ref(0);
@@ -83,8 +107,19 @@ function onSquareClick(r: number, c: number) {
     const sq = getSquare(r, c);
     if (!sq || !isClickable(sq)) return;
 
-    placeTile({ row: r, col: c, tile: selectedTile.value! });
+    const tile = selectedTile.value!;
     selectedTile.value = null;
+
+    if (tile.isBlank) {
+        // Remove tile from rack immediately so UI stays consistent
+        if (gameState.value) {
+            gameState.value.myRack = gameState.value.myRack.filter((t) => t.id !== tile.id);
+        }
+        pendingBlankPlacement.value = { row: r, col: c, tile };
+        showBlankPicker.value = true;
+    } else {
+        placeTile({ row: r, col: c, tile });
+    }
 }
 
 function recallSingle(r: number, c: number) {
@@ -94,6 +129,7 @@ function recallSingle(r: number, c: number) {
     sq.tile = null;
     const idx = pendingPlacements.value.findIndex((p) => p.row === r && p.col === c);
     if (idx !== -1) pendingPlacements.value.splice(idx, 1);
+    if (tile.isBlank) tile.letter = '';
     if (gameState.value) gameState.value.myRack.push(tile);
     // Clear selection if this tile was selected
     if (selectedTile.value?.id === tile.id) selectedTile.value = null;
@@ -168,7 +204,19 @@ function onDrop(e: DragEvent, r: number, c: number) {
     if (isPending(r, c)) recallSingle(r, c);
 
     dropSucceeded.value = true;
-    placeTile({ row: r, col: c, tile });
+
+    if (tile.isBlank) {
+        // Always prompt for a letter when placing a blank tile (rack or board-to-board move)
+        tile.letter = '';
+        // If coming from the rack the tile hasn't been removed yet — do it now
+        if (!draggingFromSquare.value && gameState.value) {
+            gameState.value.myRack = gameState.value.myRack.filter((t) => t.id !== tile.id);
+        }
+        pendingBlankPlacement.value = { row: r, col: c, tile };
+        showBlankPicker.value = true;
+    } else {
+        placeTile({ row: r, col: c, tile });
+    }
     if (selectedTile.value?.id === tile.id) selectedTile.value = null;
 }
 </script>
@@ -210,7 +258,7 @@ function onDrop(e: DragEvent, r: number, c: number) {
                 >
                     <template v-if="square && square.tile">
                         <div
-                            class="flex flex-col items-center justify-center w-full h-full leading-none select-none"
+                            class="relative flex items-center justify-center w-full h-full leading-none select-none"
                         >
                             <span
                                 class="font-bold text-gray-900"
@@ -219,10 +267,11 @@ function onDrop(e: DragEvent, r: number, c: number) {
                                 {{ square.tile.letter }}
                             </span>
                             <span
-                                class="text-gray-600"
+                                v-if="square.tile.value > 0"
+                                class="absolute top-0 right-0.5 text-gray-600 font-semibold leading-none"
                                 :style="{ fontSize: Math.max(5, boardPx / 54) + 'px' }"
                             >
-                                {{ square.tile.value > 0 ? square.tile.value : '' }}
+                                {{ square.tile.value }}
                             </span>
                         </div>
                         <div
@@ -241,6 +290,12 @@ function onDrop(e: DragEvent, r: number, c: number) {
             </template>
         </div>
     </div>
+
+    <BlankTilePicker
+        :visible="showBlankPicker"
+        @pick="onBlankLetterPicked"
+        @cancel="onBlankPickerCancel"
+    />
 </template>
 
 <style scoped></style>

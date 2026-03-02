@@ -46,8 +46,12 @@ function onDragStart(e: DragEvent, tile: Tile) {
             <span class="text-gray-900 leading-none" style="font-size: clamp(12px, 2.5vw, 20px)">
                 {{ tile.letter }}
             </span>
-            <span class="text-gray-500 leading-none" style="font-size: clamp(6px, 1vw, 10px)">
-                {{ tile.value > 0 ? tile.value : '' }}
+            <span
+                v-if="tile.value > 0"
+                class="absolute top-0 right-0.5 text-gray-500 font-semibold leading-none"
+                style="font-size: clamp(6px, 1vw, 10px)"
+            >
+                {{ tile.value }}
             </span>
         </div>
 

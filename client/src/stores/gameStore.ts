@@ -48,6 +48,7 @@ export const useGameStore = defineStore('game', () => {
         // Remove tiles from the board for each pending placement
         for (const p of pendingPlacements.value) {
             gameState.value.board[p.row][p.col].tile = null;
+            if (p.tile.isBlank) p.tile.letter = '';
         }
 
         // Return tiles to rack

@@ -113,7 +113,12 @@ export const leaveMatchmaking = async (timeControl: TimeControl): Promise<void> 
 
 export const submitWord = async (gameId: string, placements: TilePlacement[]): Promise<void> => {
     if (connection) {
-        await connection.invoke('SubmitMove', gameId, placements);
+        const payload = placements.map(({ row, col, tile: { letter, isBlank } }) => ({
+            row,
+            col,
+            tile: { letter, isBlank },
+        }));
+        await connection.invoke('SubmitMove', gameId, payload);
     }
 };
 

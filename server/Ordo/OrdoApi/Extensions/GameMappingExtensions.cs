@@ -8,9 +8,9 @@ public static class GameMappingExtensions
 {
     public static TilePlacement ToTilePlacement(this TileDtoPlacement p) => new(p.Row, p.Col, new Tile
     {
-        Letter = p.Letter,
-        Value = p.IsBlank ? 0 : TileValues.GetLetterValue(p.Letter),
-        IsBlank = p.IsBlank
+        Letter = p.Tile.Letter,
+        Value = p.Tile.IsBlank ? 0 : TileValues.GetLetterValue(p.Tile.Letter),
+        IsBlank = p.Tile.IsBlank
     });
 
     private static TileDto? ToDto(this Tile? tile) =>

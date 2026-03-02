@@ -2,7 +2,8 @@ namespace OrdoApi.DTOs;
 
 public record TileDto(string Id, char Letter, int Value, bool IsBlank);
 
-public record TileDtoPlacement(int Row, int Col, char Letter, bool IsBlank);
+public record TileInbound(char Letter, bool IsBlank);
+public record TileDtoPlacement(int Row, int Col, TileInbound Tile);
 
 public record SquareDto(string Multiplier, TileDto? Tile);
 
