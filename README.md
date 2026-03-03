@@ -1,18 +1,15 @@
 # Ordo
-Ordo is a web-based Scrabble game built around the idea of timed competitive 
-play. Inspired by chess time formats, players choose a time control (blitz, 
-rapid, etc.) before each game.
+Ordo is a web-based multiplayer word game built around the idea of timed competitive play. Inspired by chess time formats, players choose a time control (blitz, rapid, etc.) before each game.
 
 ## Background
-I enjoy playing word games but found that no good online Scrabble platform 
-supports Swedish. I'm developing Ordo as a fun side project to expand my 
-knowledge in C#, .NET, Azure and modern web development.
+I enjoy playing word games but found that no good online platform supports Swedish. I'm developing Ordo as a fun side project to solve that problem, 
+while concurrently using it as a sandbox to explore distributed systems design, horizontal scalability, and modern CI/CD workflows in .NET and Azure.
 
 ## Tech Stack
 
 **Backend:** ASP.NET Core (.NET 10), Azure SignalR, Redis  
 **Frontend:** Vue 3, TypeScript, Pinia, Vue I18n, Tailwind CSS  
-**Infrastructure:** Azure App Service, GitHub Actions (CI/CD), Docker
+**Testing & Infrastructure:** xUnit, Azure App Service, GitHub Actions (CI/CD), Docker
 
 ## Features
 
