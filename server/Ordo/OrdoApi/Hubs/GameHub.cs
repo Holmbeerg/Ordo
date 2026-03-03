@@ -286,10 +286,10 @@ public class GameHub(IConnectionMultiplexer redis, ILogger<GameHub> logger, IGam
             {
                 logger.LogInformation("Game {GameId} has completed! Winner: {WinnerId}", game.Id, player.Id);
                 var opponent = game.Players.First(p => p.Id != player.Id);
-                await Clients.Caller.SendAsync(GameEvents.GameOver, player.Id);
+                await Clients.Caller.SendAsync(GameEvents.GameOver, player.Id, GameOverReason.Completed);
                 if (!string.IsNullOrEmpty(opponent.ConnectionId))
                 {
-                    await Clients.Client(opponent.ConnectionId).SendAsync(GameEvents.GameOver, player.Id);
+                    await Clients.Client(opponent.ConnectionId).SendAsync(GameEvents.GameOver, player.Id, GameOverReason.Completed);
                 }
             }
         }
@@ -322,11 +322,11 @@ public class GameHub(IConnectionMultiplexer redis, ILogger<GameHub> logger, IGam
 
         logger.LogInformation("Player {PlayerId} resigned from game {GameId}", playerIdStr, gameId);
 
-        await Clients.Caller.SendAsync(GameEvents.GameOver, opponent?.Id);
+        await Clients.Caller.SendAsync(GameEvents.GameOver, opponent?.Id, GameOverReason.Resignation);
 
         if (opponent != null && !string.IsNullOrEmpty(opponent.ConnectionId))
         {
-            await Clients.Client(opponent.ConnectionId).SendAsync(GameEvents.GameOver, opponent.Id);
+            await Clients.Client(opponent.ConnectionId).SendAsync(GameEvents.GameOver, opponent.Id, GameOverReason.Resignation);
         }
     }
 
