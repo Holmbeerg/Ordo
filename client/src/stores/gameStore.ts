@@ -1,17 +1,22 @@
 import { defineStore } from 'pinia';
 import { ref, computed } from 'vue';
-import type { GameStateDto, TilePlacement } from '@/types/game.ts';
+import type { GameStateDto, TilePlacement, GameOverReason } from '@/types/game.ts';
 
 export const useGameStore = defineStore('game', () => {
     const gameState = ref<GameStateDto | null>(null);
     const pendingPlacements = ref<TilePlacement[]>([]);
     const error = ref<string | null>(null);
     const opponentIsConnected = ref<boolean>(false);
+    const winnerId = ref<string | null>(null);
+    const gameOverReason = ref<GameOverReason | null>(null);
 
     const isMyTurn = computed(
         () => gameState.value?.currentTurnPlayerId === gameState.value?.myPlayerId
     );
     const isGameOver = computed(() => gameState.value?.status === 'Completed');
+    const iWon = computed(
+        () => winnerId.value !== null && winnerId.value === gameState.value?.myPlayerId
+    );
     const board = computed(() => gameState.value?.board ?? null);
     const myRack = computed(() => gameState.value?.myRack ?? []);
     const myScore = computed(() => gameState.value?.myScore ?? 0);
@@ -28,6 +33,12 @@ export const useGameStore = defineStore('game', () => {
 
     function setOpponentConnected(connected: boolean) {
         opponentIsConnected.value = connected;
+    }
+
+    function setWinner(id: string, reason: GameOverReason) {
+        winnerId.value = id;
+        gameOverReason.value = reason;
+        if (gameState.value) gameState.value.status = 'Completed';
     }
 
     function placeTile(placement: TilePlacement) {
@@ -65,6 +76,8 @@ export const useGameStore = defineStore('game', () => {
         pendingPlacements.value = [];
         error.value = null;
         opponentIsConnected.value = false;
+        winnerId.value = null;
+        gameOverReason.value = null;
     }
 
     return {
@@ -73,9 +86,12 @@ export const useGameStore = defineStore('game', () => {
         pendingPlacements,
         error,
         opponentIsConnected,
+        winnerId,
+        gameOverReason,
         // Getters
         isMyTurn,
         isGameOver,
+        iWon,
         board,
         myRack,
         myScore,
@@ -86,6 +102,7 @@ export const useGameStore = defineStore('game', () => {
         // Actions
         setGameState,
         setOpponentConnected,
+        setWinner,
         placeTile,
         recallTiles,
         clearError,

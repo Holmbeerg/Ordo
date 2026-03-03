@@ -2,6 +2,8 @@ export type MultiplierType = 'None' | 'DoubleLetter' | 'TripleLetter' | 'DoubleW
 
 export type GameStatus = 'WaitingForPlayers' | 'InProgress' | 'Completed';
 
+export type GameOverReason = 'Completed' | 'Resignation' | 'Timeout';
+
 export interface Tile {
     id: string;
     letter: string;

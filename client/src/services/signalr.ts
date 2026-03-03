@@ -1,7 +1,7 @@
 import * as signalR from '@microsoft/signalr';
 import { ref } from 'vue';
 import type { TimeControl } from '@/types/TimeControl.ts';
-import type { Tile, TilePlacement } from '@/types/game.ts';
+import type { GameOverReason, Tile, TilePlacement } from '@/types/game.ts';
 import { useGameStore } from '@/stores/gameStore.ts';
 
 export const connectionState = ref<'disconnected' | 'connecting' | 'connected'>('disconnected');
@@ -68,6 +68,11 @@ export const createConnection = (): signalR.HubConnection => {
         const gameStore = useGameStore();
         gameStore.error = errorMessage;
         gameStore.recallTiles();
+    });
+
+    connection.on('GameOver', (winnerId: string, reason: GameOverReason) => {
+        console.log(`Game over. Winner: ${winnerId}, Reason: ${reason}`);
+        useGameStore().setWinner(winnerId, reason);
     });
 
     return connection;
