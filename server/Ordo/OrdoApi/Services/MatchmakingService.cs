@@ -1,4 +1,5 @@
 using System.Text.Json;
+using OrdoApi.Constants;
 using OrdoApi.Extensions;
 using OrdoApi.Models;
 using StackExchange.Redis;
@@ -11,7 +12,7 @@ public class MatchmakingService(IConnectionMultiplexer redis, ILogger<Matchmakin
 
     public async Task<IMatchmakingResult> JoinQueueAsync(string playerId, TimeControl timeControl)
     {
-        var queueKey = $"matchmaking:{timeControl.ToString().ToLower()}";
+        var queueKey = RedisKeys.MatchmakingQueue(timeControl);
 
         logger.LogInformation("Player {PlayerId} is searching for a {TimeControl} match.", playerId, timeControl);
 
@@ -20,14 +21,15 @@ public class MatchmakingService(IConnectionMultiplexer redis, ILogger<Matchmakin
         if (opponentId.IsNullOrEmpty || opponentId == playerId)
         {
             await _db.ListRightPushAsync(queueKey, playerId);
+            await _db.KeyExpireAsync(queueKey, RedisKeys.MatchmakingQueueTtl);
             logger.LogInformation("Player {PlayerId} is waiting in queue: {QueueKey}", playerId, queueKey);
             return new QueuedResult();
         }
 
         logger.LogInformation("Match found! {Player1} vs {Player2} for {TimeControl}", opponentId, playerId, timeControl);
 
-        var opponentJson = await _db.StringGetAsync($"guest_player:{opponentId}");
-        var playerJson = await _db.StringGetAsync($"guest_player:{playerId}");
+        var opponentJson = await _db.StringGetAsync(RedisKeys.GuestPlayer(opponentId.ToString()));
+        var playerJson = await _db.StringGetAsync(RedisKeys.GuestPlayer(playerId));
 
         var opponent = JsonSerializer.Deserialize<GuestPlayer>((string)opponentJson!);
         var player = JsonSerializer.Deserialize<GuestPlayer>((string)playerJson!);
@@ -47,9 +49,9 @@ public class MatchmakingService(IConnectionMultiplexer redis, ILogger<Matchmakin
         opponent.CurrentGameId = newGame.Id;
         player.CurrentGameId = newGame.Id;
 
-        await _db.StringSetAsync($"guest_player:{opponent.Id}", JsonSerializer.Serialize(opponent));
-        await _db.StringSetAsync($"guest_player:{player.Id}", JsonSerializer.Serialize(player));
-        await _db.StringSetAsync($"game:{newGame.Id}", JsonSerializer.Serialize(newGame));
+        await _db.StringSetAsync(RedisKeys.GuestPlayer(opponent.Id), JsonSerializer.Serialize(opponent), RedisKeys.GuestPlayerTtl);
+        await _db.StringSetAsync(RedisKeys.GuestPlayer(player.Id), JsonSerializer.Serialize(player), RedisKeys.GuestPlayerTtl);
+        await _db.StringSetAsync(RedisKeys.Game(newGame.Id), JsonSerializer.Serialize(newGame), RedisKeys.GameTtl);
 
         var playerDto = newGame.ToGameStateDto(player.Id);
         var opponentDto = newGame.ToGameStateDto(opponent.Id);
@@ -63,7 +65,7 @@ public class MatchmakingService(IConnectionMultiplexer redis, ILogger<Matchmakin
 
     public async Task LeaveQueueAsync(string playerId, TimeControl timeControl)
     {
-        var queueKey = $"matchmaking:{timeControl.ToString().ToLower()}";
+        var queueKey = RedisKeys.MatchmakingQueue(timeControl);
         var removed = await _db.ListRemoveAsync(queueKey, playerId);
 
         if (removed > 0)

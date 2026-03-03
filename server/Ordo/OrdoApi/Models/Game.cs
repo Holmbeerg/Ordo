@@ -5,6 +5,8 @@ namespace OrdoApi.Models;
 public class Game
 {
     public string Id { get; set; } = Guid.NewGuid().ToString();
+    public string RedisKey => GetRedisKey(Id);
+    public static string GetRedisKey(string id) => $"game:{id}";
     public string Language { get; set; } = "swedish"; 
     public GameStatus Status { get; set; } = GameStatus.WaitingForPlayers;
     public Board Board { get; set; } = new();
