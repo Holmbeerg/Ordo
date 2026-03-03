@@ -128,8 +128,20 @@ public class GameHub(IConnectionMultiplexer redis, ILogger<GameHub> logger, IGam
 
         // Notify opponent that this player is back online
         await NotifyOpponentConnectionChange(player, connected: true);
-
-        // TODO: add back to group if in a game etc
+        
+        if (player.CurrentGameId != null)
+        {
+            var gameJson = await _db.StringGetAsync($"game:{player.CurrentGameId}");
+            if (!gameJson.IsNullOrEmpty)
+            {
+                var game = JsonSerializer.Deserialize<Game>((string)gameJson!);
+                if (game != null)
+                {
+                    var dto = game.ToGameStateDto(player.Id);
+                    await Clients.Caller.SendAsync(GameEvents.ReceiveGameState, dto);
+                }
+            }
+        }
     }
 
     private async Task CreateNewGuestPlayer()
