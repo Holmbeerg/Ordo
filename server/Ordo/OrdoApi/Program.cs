@@ -10,15 +10,22 @@ var builder = WebApplication.CreateBuilder(args);
 // Add services to the container.
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
 builder.Services.AddOpenApi();
-builder.Services.AddSignalR()
+var signalRBuilder = builder.Services.AddSignalR()
     .AddJsonProtocol(options =>
     {
         options.PayloadSerializerOptions.Converters.Add(new JsonStringEnumConverter()); // for TimeControl and GameStatus enums
     });
+var azureSignalRConnectionString = builder.Configuration["Azure:SignalR:ConnectionString"];
+if (!string.IsNullOrEmpty(azureSignalRConnectionString))
+{
+    signalRBuilder.AddAzureSignalR(azureSignalRConnectionString);
+}
 builder.Services.AddControllers();
 builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
 
-builder.Services.AddSingleton<IConnectionMultiplexer>(ConnectionMultiplexer.Connect("localhost:6379")); // redis
+var redisConnectionString = builder.Configuration["Redis:ConnectionString"] ?? "localhost:6379";
+var redis = await ConnectionMultiplexer.ConnectAsync(redisConnectionString);
+builder.Services.AddSingleton<IConnectionMultiplexer>(redis);
 builder.Services.AddSingleton<IWordDictionaryService, WordDictionaryService>();
 builder.Services.AddSingleton<IGameLogicService, GameLogicService>();
 builder.Services.AddSingleton<IMatchmakingService, MatchmakingService>();
@@ -27,7 +34,10 @@ builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowVueApp", policy =>
     {
-        policy.WithOrigins("http://localhost:5173") // dev server
+        policy.WithOrigins(
+                "http://localhost:5173",
+                "https://ordo-dek.pages.dev"
+            )
             .AllowAnyHeader()
             .AllowAnyMethod()
             .AllowCredentials();

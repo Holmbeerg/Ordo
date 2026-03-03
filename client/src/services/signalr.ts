@@ -14,7 +14,8 @@ export const createConnection = (): signalR.HubConnection => {
         return connection;
     }
 
-    const url = `http://localhost:5172/gameHub?playerId=${playerId.value}`;
+    const baseUrl = import.meta.env.VITE_API_URL || '';
+    const url = `${baseUrl}/gameHub?playerId=${playerId.value}`;
 
     connection = new signalR.HubConnectionBuilder().withUrl(url).withAutomaticReconnect().build(); // doesn't start the connection yet
 
