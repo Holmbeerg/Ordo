@@ -12,8 +12,16 @@ import { useGame } from '@/composables/useGame.ts';
 import { SELECTED_TILE_KEY } from '@/composables/useSelectedTile.ts';
 import type { Tile } from '@/types/game.ts';
 
-const { isGameOver, tilesRemaining, iWon, gameOverReason, myScore, opponentScore, opponentName } =
-    useGame();
+const {
+    isGameOver,
+    tilesRemaining,
+    iWon,
+    gameOverReason,
+    myScore,
+    opponentScore,
+    opponentName,
+    winnerId,
+} = useGame();
 
 const router = useRouter();
 
@@ -90,6 +98,7 @@ const legend = [
         :my-score="myScore"
         :opponent-score="opponentScore"
         :opponent-name="opponentName"
+        :winner-id="winnerId"
         @back-to-lobby="handleBackToLobby"
     />
 </template>

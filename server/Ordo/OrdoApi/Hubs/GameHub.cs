@@ -285,12 +285,13 @@ public class GameHub(IConnectionMultiplexer redis, ILogger<GameHub> logger, IGam
 
             if (game.Status == GameStatus.Completed)
             {
-                logger.LogInformation("Game {GameId} has completed! Winner: {WinnerId}", game.Id, player.Id);
+                var winnerId = game.GetWinnerId();
+                logger.LogInformation("Game {GameId} has completed! Winner: {WinnerId}", game.Id, winnerId ?? "Draw");
                 var opponent = game.Players.First(p => p.Id != player.Id);
-                await Clients.Caller.SendAsync(GameEvents.GameOver, player.Id, GameOverReason.Completed);
+                await Clients.Caller.SendAsync(GameEvents.GameOver, winnerId, GameOverReason.Points);
                 if (!string.IsNullOrEmpty(opponent.ConnectionId))
                 {
-                    await Clients.Client(opponent.ConnectionId).SendAsync(GameEvents.GameOver, player.Id, GameOverReason.Completed);
+                    await Clients.Client(opponent.ConnectionId).SendAsync(GameEvents.GameOver, winnerId, GameOverReason.Points);
                 }
             }
         }
@@ -347,12 +348,12 @@ public class GameHub(IConnectionMultiplexer redis, ILogger<GameHub> logger, IGam
 
         if (gameEnded)
         {
-            var winner = game.Players.OrderByDescending(p => p.Score).First();
-            logger.LogInformation("Game {GameId} ended due to consecutive passes. Winner: {WinnerId}", game.Id, winner.Id);
+            var winnerId = game.GetWinnerId();
+            logger.LogInformation("Game {GameId} ended due to consecutive passes. Winner: {WinnerId}", game.Id, winnerId ?? "Draw");
             foreach (var p in game.Players)
             {
                 if (string.IsNullOrEmpty(p.ConnectionId)) continue;
-                await Clients.Client(p.ConnectionId).SendAsync(GameEvents.GameOver, winner.Id, GameOverReason.ConsecutivePasses);
+                await Clients.Client(p.ConnectionId).SendAsync(GameEvents.GameOver, winnerId, GameOverReason.ConsecutivePasses);
             }
         }
     }

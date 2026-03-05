@@ -8,6 +8,7 @@ const props = defineProps<{
     myScore: number;
     opponentScore: number;
     opponentName: string | null;
+    winnerId: string | null;
 }>();
 
 const emit = defineEmits<{
@@ -16,16 +17,18 @@ const emit = defineEmits<{
 
 function headline(): string {
     if (props.reason === 'Resignation') return 'Opponent resigned. You win!';
-    if (props.reason === 'ConsecutivePasses') return props.iWon ? 'You win!' : 'You lose!';
+    if (!props.winnerId) return "It's a draw!";
     if (props.iWon) return 'You win!';
     return 'You lose!';
 }
 
 function subline(): string {
     if (props.reason === 'Resignation') return 'Your opponent gave up.';
-    if (props.reason === 'ConsecutivePasses' && props.iWon)
-        return 'Game ended by passes. You won on points!';
-    if (props.reason === 'ConsecutivePasses') return 'Game ended by passes. You lost on points.';
+    if (!props.winnerId) return 'Both players finished with equal points.';
+    if (props.reason === 'ConsecutivePasses')
+        return props.iWon
+            ? 'Game ended by passes. You won on points!'
+            : 'Game ended by passes. You lost on points.';
     return 'Good game!';
 }
 </script>
@@ -43,7 +46,7 @@ function subline(): string {
                     <!-- Icon + headline -->
                     <div class="flex flex-col items-center gap-2">
                         <span class="text-5xl" role="img" :aria-label="headline()">
-                            {{ iWon ? '🏆' : '😔' }}
+                            {{ !winnerId ? '🤝' : iWon ? '🏆' : '😔' }}
                         </span>
                         <h2 class="text-white font-bold text-2xl leading-tight">
                             {{ headline() }}

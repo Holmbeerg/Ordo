@@ -2,7 +2,7 @@ namespace OrdoApi.Models;
 
 public enum GameOverReason
 {
-    Completed,
+    Points,
     Resignation,
     Timeout,
     ConsecutivePasses,

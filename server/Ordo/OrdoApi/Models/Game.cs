@@ -61,6 +61,14 @@ public class Game
         CurrentTurnIndex = (CurrentTurnIndex + 1) % Players.Count;
     }
 
+    public string? GetWinnerId()
+    {
+        if (Players.Count == 0) return null;
+        var maxScore = Players.Max(p => p.Score);
+        var topPlayers = Players.Where(p => p.Score == maxScore).ToList();
+        return topPlayers.Count == 1 ? topPlayers[0].Id : null; // if there's a tie, return null
+    }
+
     public bool PassTurnAndCheck()
     {
         ConsecutivePasses++;
