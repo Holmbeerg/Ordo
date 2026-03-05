@@ -279,6 +279,7 @@ public class GameHub(IConnectionMultiplexer redis, ILogger<GameHub> logger, IGam
             }
 
             gameLogic.ExecuteMove(game, player, placements);
+            game.ConsecutivePasses = 0;
 
             await SaveAndBroadcastGameState(game);
 
@@ -338,11 +339,22 @@ public class GameHub(IConnectionMultiplexer redis, ILogger<GameHub> logger, IGam
         var (game, playerIdStr) = context.Value;
         if (!await ValidatePlayerTurn(game, playerIdStr)) return;
 
-        game.AdvanceTurn();
+        logger.LogInformation("Player {PlayerId} passed their turn in game {GameId}", playerIdStr, gameId);
+
+        var gameEnded = game.PassTurnAndCheck();
 
         await SaveAndBroadcastGameState(game);
 
-        logger.LogInformation("Player {PlayerId} passed their turn in game {GameId}", playerIdStr, gameId);
+        if (gameEnded)
+        {
+            var winner = game.Players.OrderByDescending(p => p.Score).First();
+            logger.LogInformation("Game {GameId} ended due to consecutive passes. Winner: {WinnerId}", game.Id, winner.Id);
+            foreach (var p in game.Players)
+            {
+                if (string.IsNullOrEmpty(p.ConnectionId)) continue;
+                await Clients.Client(p.ConnectionId).SendAsync(GameEvents.GameOver, winner.Id, GameOverReason.ConsecutivePasses);
+            }
+        }
     }
 
     public async Task ExchangeTiles(string gameId, List<Tile> tilesToSwap)
@@ -358,6 +370,7 @@ public class GameHub(IConnectionMultiplexer redis, ILogger<GameHub> logger, IGam
         try
         {
             gameLogic.SwapTiles(game, player, tilesToSwap);
+            game.ConsecutivePasses = 0;
 
             await SaveAndBroadcastGameState(game);
 

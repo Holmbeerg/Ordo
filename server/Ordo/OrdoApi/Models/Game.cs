@@ -13,6 +13,7 @@ public class Game
     public List<Tile> TileBag { get; set; } = TileValues.GetSwedishTileBag();
     public List<GuestPlayer> Players { get; set; } = [];
     public int CurrentTurnIndex { get; set; } // this needs to be public for JSON serialization
+    public int ConsecutivePasses { get; set; }
     public string? CurrentPlayerId => Players.Count > 0 ? Players[CurrentTurnIndex].Id : null;
 
     public void StartGame()
@@ -58,5 +59,14 @@ public class Game
         if (Players.Count == 0) return;
 
         CurrentTurnIndex = (CurrentTurnIndex + 1) % Players.Count;
+    }
+
+    public bool PassTurnAndCheck()
+    {
+        ConsecutivePasses++;
+        AdvanceTurn();
+        if (ConsecutivePasses < 3) return false; 
+        Status = GameStatus.Completed;
+        return true;
     }
 }

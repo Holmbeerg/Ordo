@@ -5,4 +5,5 @@ public enum GameOverReason
     Completed,
     Resignation,
     Timeout,
+    ConsecutivePasses,
 }

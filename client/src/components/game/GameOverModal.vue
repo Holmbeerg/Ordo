@@ -16,12 +16,16 @@ const emit = defineEmits<{
 
 function headline(): string {
     if (props.reason === 'Resignation') return 'Opponent resigned. You win!';
+    if (props.reason === 'ConsecutivePasses') return props.iWon ? 'You win!' : 'You lose!';
     if (props.iWon) return 'You win!';
     return 'You lose!';
 }
 
 function subline(): string {
     if (props.reason === 'Resignation') return 'Your opponent gave up.';
+    if (props.reason === 'ConsecutivePasses' && props.iWon)
+        return 'Game ended by passes. You won on points!';
+    if (props.reason === 'ConsecutivePasses') return 'Game ended by passes. You lost on points.';
     return 'Good game!';
 }
 </script>
