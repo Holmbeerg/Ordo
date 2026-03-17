@@ -1,12 +1,19 @@
 <script setup lang="ts">
-import { inject, ref, onMounted, onUnmounted } from 'vue';
+import { inject, ref, onMounted, onUnmounted, computed } from 'vue';
 import { useGame } from '@/composables/useGame.ts';
+import { useScorePreview } from '@/composables/useScorePreview.ts';
 import { SELECTED_TILE_KEY } from '@/composables/useSelectedTile.ts';
 import BlankTilePicker from '@/components/game/BlankTilePicker.vue';
 import type { Square, TilePlacement } from '@/types/game.ts';
 
 const { board, isMyTurn, pendingPlacements, placeTile, gameState } = useGame();
+const { previewScore } = useScorePreview();
 const selectedTile = inject(SELECTED_TILE_KEY)!;
+
+const latestPendingPlacement = computed(() => {
+    if (pendingPlacements.value.length === 0) return null;
+    return pendingPlacements.value[pendingPlacements.value.length - 1];
+});
 
 // Blank tile picker state
 const showBlankPicker = ref(false);
@@ -50,6 +57,10 @@ function isCenter(r: number, c: number) {
 
 function isPending(r: number, c: number) {
     return pendingPlacements.value.some((p) => p.row === r && p.col === c);
+}
+
+function isLatestPending(r: number, c: number) {
+    return latestPendingPlacement.value?.row === r && latestPendingPlacement.value?.col === c;
 }
 
 // We still need this for drag-and-drop events since they only pass row/col coordinates, not the square object
@@ -278,6 +289,12 @@ function onDrop(e: DragEvent, r: number, c: number) {
                             v-if="isPending(r, c)"
                             class="absolute inset-0 bg-black/0 hover:bg-black/20 transition-colors duration-100"
                         />
+                        <div
+                            v-if="isLatestPending(r, c)"
+                            class="pointer-events-none absolute -right-2 -bottom-2 z-20 rounded-md border border-amber-300/70 bg-[#1f1d1b]/95 px-1.5 py-0.5 text-[10px] font-semibold text-amber-300 shadow-lg"
+                        >
+                            +{{ previewScore }}
+                        </div>
                     </template>
                     <template v-else>
                         <span
