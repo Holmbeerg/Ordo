@@ -11,31 +11,26 @@
         <div v-if="!searching" class="w-full max-w-md text-center mb-8">
             <p class="text-xl mb-4 text-white">{{ t('home.pickTime') }}</p>
 
-            <div class="grid grid-cols-2 gap-4">
-                <button
-                    @click="startSearch('Bullet')"
-                    class="bg-red-600 text-white px-6 py-3 rounded-lg hover:bg-red-800 cursor-pointer transition duration-300"
-                >
-                    Bullet (1+1)
-                </button>
+            <div class="flex flex-col gap-4 w-full">
+                <div class="grid grid-cols-2 gap-4">
+                    <button
+                        @click="startSearch('Blitz')"
+                        class="bg-yellow-600 text-white px-6 py-3 rounded-lg hover:bg-yellow-800 cursor-pointer transition duration-300"
+                    >
+                        Blitz (3+2)
+                    </button>
 
-                <button
-                    @click="startSearch('Blitz')"
-                    class="bg-yellow-600 text-white px-6 py-3 rounded-lg hover:bg-yellow-800 cursor-pointer transition duration-300"
-                >
-                    Blitz (3+0)
-                </button>
-
-                <button
-                    @click="startSearch('Rapid')"
-                    class="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-800 cursor-pointer transition duration-300"
-                >
-                    Rapid (5+0)
-                </button>
+                    <button
+                        @click="startSearch('Rapid')"
+                        class="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-800 cursor-pointer transition duration-300"
+                    >
+                        Rapid (8+5)
+                    </button>
+                </div>
 
                 <button
                     @click="startSearch('Classical')"
-                    class="bg-green-600 text-white px-6 py-3 rounded-lg hover:bg-green-800 cursor-pointer transition duration-300"
+                    class="w-full bg-green-600 text-white px-6 py-3 rounded-lg hover:bg-green-800 cursor-pointer transition duration-300"
                 >
                     {{ t('home.classical') }}
                 </button>
@@ -72,8 +67,6 @@ const { searching, currentMode, searchTimeSeconds, startSearch, cancelSearch } =
 
 const formatTimeControl = (timeControl: TimeControl): string => {
     switch (timeControl) {
-        case 'Bullet':
-            return 'Bullet (1+1)';
         case 'Blitz':
             return 'Blitz (3+0)';
         case 'Rapid':
